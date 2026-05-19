@@ -1,6 +1,6 @@
 /**
  * AI Client for APIMart (OpenAI-compatible API)
- * Supports Gemini 2.5 Flash for vision and Claude Sonnet 4.6 for code generation
+ * Gemini 2.5 Flash for vision → Claude Sonnet 4.6 for code generation
  */
 
 const API_BASE_URL = 'https://api.apimart.ai/v1';
@@ -49,7 +49,6 @@ export class AIClient {
     if (!API_KEY) {
       throw new Error('APIMART_API_KEY environment variable is not set');
     }
-
     this.headers = {
       'Authorization': `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
@@ -57,136 +56,91 @@ export class AIClient {
   }
 
   /**
-   * Analyze image using Gemini 2.5 Flash for vision analysis
+   * Analyze image using Gemini 2.5 Flash
    */
   async analyzeImage(imageBase64: string): Promise<VisionAnalysisResult> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          model: 'gemini-2.5-flash',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `Analyze this design image and extract the following information in JSON format:
+    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: 'gemini-2.5-flash',
+        stream: false,
+        max_tokens: 4096,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analyze this design image. Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
 
-{
-  "colorPalette": {
-    "primary": ["#hex1", "#hex2"],
-    "secondary": ["#hex1", "#hex2"],
-    "background": ["#hex1", "#hex2"],
-    "accent": ["#hex1", "#hex2"]
-  },
-  "typography": {
-    "headings": "font description (e.g., 'Bold sans-serif, 48px')",
-    "body": "font description (e.g., 'Regular sans-serif, 16px')",
-    "characteristics": ["characteristic1", "characteristic2"]
-  },
-  "layout": {
-    "structure": ["section1 description", "section2 description"],
-    "gridType": "grid description (e.g., '12-column grid')",
-    "spacing": "spacing description (e.g., 'Generous whitespace')",
-    "alignment": "alignment description (e.g., "Left-aligned")"
-  },
-  "visualStyle": {
-    "tags": ["style1", "style2", "style3"],
-    "mood": "overall mood (e.g., 'Professional and modern')",
-    "aesthetic": "aesthetic description"
-  },
-  "content": {
-    "headings": ["heading1 text", "heading2 text"],
-    "bodyText": ["body text snippet 1", "body text snippet 2"],
-    "buttons": ["button text 1", "button text 2"]
-  }
-}
+{"colorPalette":{"primary":["#hex"],"secondary":["#hex"],"background":["#hex"],"accent":["#hex"]},"typography":{"headings":"font description","body":"font description","characteristics":["char1"]},"layout":{"structure":["section desc 1","section desc 2"],"gridType":"grid type","spacing":"spacing desc","alignment":"alignment desc"},"visualStyle":{"tags":["tag1","tag2","tag3"],"mood":"mood desc","aesthetic":"aesthetic desc"},"content":{"headings":["heading text"],"bodyText":["body text"],"buttons":["button text"]}}`
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageBase64 }
+              }
+            ]
+          }
+        ]
+      }),
+    });
 
-Please provide accurate hex codes and detailed descriptions.`
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageBase64
-                  }
-                }
-              ]
-            }
-          ],
-          response_format: { type: "json_object" }
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Vision API error: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-
-      return JSON.parse(content);
-    } catch (error) {
-      console.error('Error analyzing image:', error);
-      throw error;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Vision API error: ${response.status} - ${error}`);
     }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    return parseJSON(content);
   }
 
   /**
-   * Generate CSS and Markdown using Claude Sonnet 4.6
+   * Generate CSS and Markdown using Claude Sonnet
    */
   async generateDesignCode(analysis: VisionAnalysisResult): Promise<CodeGenerationResult> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          messages: [
-            {
-              role: 'user',
-              content: `You are a design system expert. Based on the following design analysis, generate:
-
-1. A complete CSS variables section with proper color system, typography scale, spacing tokens
-2. A markdown documentation describing the design system
-3. An AI prompt that can be used to recreate this design
+    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        stream: false,
+        max_tokens: 8192,
+        messages: [
+          {
+            role: 'user',
+            content: `You are a design system expert. Based on this analysis, generate CSS variables, markdown docs, and a rebuild prompt.
 
 Design Analysis:
 ${JSON.stringify(analysis, null, 2)}
 
-Please respond with a JSON object in this exact format:
-{
-  "cssContent": "Complete CSS with @property or :root variables, including colors, typography, spacing, and utility classes",
-  "markdownContent": "# Design System Documentation\\n\\n## Color Palette\\n\\n...",
-  "promptContent": "A detailed prompt that another AI can use to recreate this design, including layout structure, colors, typography, spacing, and visual style"
-}
+IMPORTANT: Return ONLY valid JSON (no markdown fences, no explanation outside JSON) in this exact format:
+{"cssContent":"CSS string with :root variables","markdownContent":"Markdown documentation string","promptContent":"Prompt string for recreating this design"}
 
-Make the CSS production-ready with proper naming conventions (BEM or utility-first approach).`
-            }
-          ],
-          response_format: { type: "json_object" }
-        }),
-      });
+Rules:
+- cssContent: CSS custom properties only (no selectors besides :root), keep under 2000 chars
+- markdownContent: Short design system docs, keep under 1500 chars  
+- promptContent: Concise prompt for another LLM to recreate the page, keep under 2000 chars
+- All values must be proper escaped JSON strings (use \\n for newlines)
+- Do NOT truncate any value`
+          }
+        ]
+      }),
+    });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Code generation API error: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-
-      return JSON.parse(content);
-    } catch (error) {
-      console.error('Error generating code:', error);
-      throw error;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Code generation API error: ${response.status} - ${error}`);
     }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    return parseJSON(content);
   }
 
   /**
-   * Complete style extraction workflow: vision analysis → code generation
+   * Full pipeline: vision → code gen
    */
   async extractStyle(imageBase64: string): Promise<{
     analysis: VisionAnalysisResult;
@@ -194,9 +148,34 @@ Make the CSS production-ready with proper naming conventions (BEM or utility-fir
   }> {
     const analysis = await this.analyzeImage(imageBase64);
     const generated = await this.generateDesignCode(analysis);
-
     return { analysis, generated };
   }
+}
+
+/**
+ * Robust JSON parser for AI responses
+ */
+function parseJSON(text: string): any {
+  if (!text) throw new Error('Empty response from AI');
+
+  // Try direct parse
+  try { return JSON.parse(text); } catch {}
+
+  // Try extracting from markdown code block
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1]); } catch {}
+  }
+
+  // Try finding balanced braces
+  const braceStart = text.indexOf('{');
+  const braceEnd = text.lastIndexOf('}');
+  if (braceStart !== -1 && braceEnd > braceStart) {
+    const candidate = text.substring(braceStart, braceEnd + 1);
+    try { return JSON.parse(candidate); } catch {}
+  }
+
+  throw new Error(`Failed to parse AI JSON response (length=${text.length}): ${text.substring(0, 300)}`);
 }
 
 export default AIClient;
