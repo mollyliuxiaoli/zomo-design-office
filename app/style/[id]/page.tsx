@@ -52,6 +52,25 @@ export default function StyleDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = (tab: typeof activeTab, content: string) => {
+    const extensions: Record<string, string> = {
+      markdown: 'md',
+      css: 'css',
+      prompt: 'txt',
+      tailwind: 'ts',
+      shadcn: 'css',
+    };
+    const ext = extensions[tab] || 'txt';
+    const filename = `${String(style?.title || 'style').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${tab}.${ext}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDelete = async () => {
     if (style && confirm('确定要删除这个风格吗？')) {
       try {
@@ -472,17 +491,25 @@ export default function StyleDetailPage() {
               </pre>
             </div>
 
-            {/* Copy Button */}
-            <button
-              onClick={() => handleCopy(getTabContent(activeTab))}
-              className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                copied
-                  ? 'bg-green-500 text-white'
-                  : 'bg-black text-white hover:bg-gray-800'
-              }`}
-            >
-              {copied ? '已复制！' : `复制${activeTab === 'prompt' ? 'Prompt' : activeTab === 'shadcn' ? 'shadcn/ui' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
-            </button>
+            {/* Copy + Download Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleCopy(getTabContent(activeTab))}
+                className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+                  copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+              >
+                {copied ? '已复制！' : '复制'}
+              </button>
+              <button
+                onClick={() => handleDownload(activeTab, getTabContent(activeTab))}
+                className="px-6 py-3 border border-black text-black rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                下载
+              </button>
+            </div>
               </>
             )}
           </div>
