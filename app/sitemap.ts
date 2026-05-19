@@ -2,8 +2,24 @@ import { MetadataRoute } from 'next';
 
 const domain = process.env.NEXT_PUBLIC_BRAND_DOMAIN || 'distill.style';
 
+const SEO_STYLES = [
+  'linear-app',
+  'stripe',
+  'apple',
+  'vercel',
+  'notion',
+  'tailwind-css',
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = `https://${domain}`;
+
+  const stylePages = SEO_STYLES.map((slug) => ({
+    url: `${baseUrl}/styles/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }));
 
   return [
     {
@@ -36,5 +52,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    ...stylePages,
   ];
 }

@@ -253,8 +253,15 @@ export default function StyleDetailPage() {
                 onClick={handleShare}
                 className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
               >
-                分享
+                分享链接
               </button>
+              <a
+                href={`/api/og?title=${encodeURIComponent(style.title || 'Style')}&keywords=${encodeURIComponent((spec.vibe?.keywords || []).join(','))}&primary=${encodeURIComponent((spec.colors?.primary?.[0] || '#2563eb'))}&bg=${encodeURIComponent((spec.colors?.background?.[0] || '#ffffff'))}&fg=${encodeURIComponent((spec.colors?.foreground?.[0] || '#0f172a'))}&confidence=${spec.meta?.confidence || 85}&palette=${encodeURIComponent((spec.colors?.primary || []).concat(spec.colors?.secondary || []).slice(0,6).join(','))}&vibe=${encodeURIComponent(String(spec.vibe?.description || '').slice(0, 80))}`}
+                target="_blank"
+                className="px-4 py-2 border border-black text-black rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                DNA Card
+              </a>
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"

@@ -9,7 +9,7 @@ export default function Navigation() {
   const navItems = [
     { href: '/library', label: 'Library' },
     { href: '/analyze', label: 'Analyze' },
-    { href: '/showcase', label: 'Showcase' },
+    { href: '/styles/linear-app', label: 'Styles' },
     { href: '/compare', label: 'Compare' },
   ];
 
@@ -21,6 +21,7 @@ export default function Navigation() {
   // Map sub-routes to parent nav item
   const activeNav = (() => {
     if (pathname.startsWith('/style/')) return '/library';
+    if (pathname.startsWith('/styles/')) return pathname;
     return pathname;
   })();
 
