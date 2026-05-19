@@ -14,6 +14,7 @@ export default function StyleDetailPage() {
   const [style, setStyle] = useState<LibraryRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'markdown' | 'css' | 'prompt' | 'tailwind' | 'shadcn'>('markdown');
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -60,6 +61,30 @@ export default function StyleDetailPage() {
         console.error('[distill] Failed to delete style:', err);
         alert('删除失败，请重试');
       }
+    }
+  };
+
+  const handleShare = async () => {
+    if (!style) return;
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spec: style.spec,
+          title: style.title,
+          thumbnailUrl: style.thumbnailUrl,
+        }),
+      });
+      if (!res.ok) throw new Error('分享失败');
+      const { token } = await res.json();
+      const url = `${window.location.origin}/s/${token}`;
+      setShareUrl(url);
+      await navigator.clipboard.writeText(url);
+      alert('分享链接已复制到剪贴板！');
+    } catch (err) {
+      console.error('[distill] Share failed:', err);
+      alert('分享失败，请重试');
     }
   };
 
@@ -223,12 +248,20 @@ export default function StyleDetailPage() {
                 </span>
               </div>
             </div>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              删除
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleShare}
+                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                分享
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                删除
+              </button>
+            </div>
           </div>
         </div>
 
