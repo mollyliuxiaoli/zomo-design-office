@@ -9,6 +9,7 @@ export default function Navigation() {
   const navItems = [
     { href: '/', label: '风格库' },
     { href: '/extract', label: '提取风格' },
+    { href: '/reverse', label: '页面还原' },
     { href: '/compare', label: '生图对比' },
     { href: '/records', label: '我的记录' },
     { href: '/manage', label: '管理' },

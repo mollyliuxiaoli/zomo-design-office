@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
-import { mockStyleAnalysis } from '../lib/mockAnalysis';
 import { storageUtils } from '../lib/storage';
 
 export default function ExtractPage() {
@@ -45,16 +44,39 @@ export default function ExtractPage() {
     setError('');
 
     try {
-      // 使用模拟AI分析
-      const analyzedStyle = await mockStyleAnalysis(preview, styleName || undefined);
+      // 调用真实的AI分析API
+      const response = await fetch('/api/analyze-style', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: preview,
+          name: styleName || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '分析失败');
+      }
+
+      const analyzedStyle = await response.json();
+
+      // 生成ID和添加创建时间
+      const styleWithId = {
+        ...analyzedStyle,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+      };
 
       // 保存到localStorage
-      storageUtils.saveStyle(analyzedStyle);
+      storageUtils.saveStyle(styleWithId);
 
       // 跳转到详情页
-      router.push(`/style/${analyzedStyle.id}`);
+      router.push(`/style/${styleWithId.id}`);
     } catch (err) {
-      setError('分析失败，请重试');
+      setError(err instanceof Error ? err.message : '分析失败，请重试');
       console.error(err);
     } finally {
       setLoading(false);
