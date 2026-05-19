@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import { styleRepo } from '../../lib/storage/repo';
 import type { LibraryRecord } from '../../lib/storage/db';
+import SpecEditor from '../../components/spec/SpecEditor';
+import type { StyleSpecV1 } from '@/app/lib/spec/types';
 
 export default function StyleDetailPage() {
   const params = useParams();
@@ -13,6 +15,7 @@ export default function StyleDetailPage() {
   const [activeTab, setActiveTab] = useState<'markdown' | 'css' | 'prompt'>('markdown');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
     const loadStyle = async () => {
@@ -72,6 +75,16 @@ export default function StyleDetailPage() {
   const markdownContent = spec.derived?.markdown || '';
   const cssContent = spec.derived?.cssVariables || '';
   const promptContent = spec.derived?.restorationPrompt || '';
+
+  const handleSpecChange = async (updatedSpec: StyleSpecV1) => {
+    if (!style) return;
+    try {
+      const updatedRecord = await styleRepo.update(style.id, { spec: updatedSpec });
+      if (updatedRecord) setStyle(updatedRecord);
+    } catch (err) {
+      console.error('[distill] Failed to save spec edit:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -219,12 +232,32 @@ export default function StyleDetailPage() {
             </div>
           </div>
 
-          {/* Right Column - Generated Content */}
+          {/* Right Column */}
           <div>
-            <h2 className="text-xl font-semibold text-black mb-4">生成内容</h2>
+            {/* Edit / Output toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-black">
+                {showEditor ? '编辑 Style Spec' : '生成内容'}
+              </h2>
+              <button
+                onClick={() => setShowEditor(!showEditor)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  showEditor
+                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+              >
+                {showEditor ? '查看输出' : '编辑 Spec'}
+              </button>
+            </div>
 
-            {/* Tab Buttons */}
-            <div className="flex gap-2 mb-4">
+            {/* SpecEditor */}
+            {showEditor ? (
+              <SpecEditor spec={spec} onChange={handleSpecChange} />
+            ) : (
+              <>
+                {/* Tab Buttons */}
+                <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setActiveTab('markdown')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -285,6 +318,8 @@ export default function StyleDetailPage() {
             >
               {copied ? '已复制！' : `复制${activeTab === 'prompt' ? 'Prompt' : activeTab.toUpperCase()}`}
             </button>
+              </>
+            )}
           </div>
         </div>
       </div>
