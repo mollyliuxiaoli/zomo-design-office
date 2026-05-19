@@ -55,7 +55,7 @@ export default function StyleDetailPage() {
     if (style && confirm('确定要删除这个风格吗？')) {
       try {
         await styleRepo.delete(style.id);
-        router.push('/manage');
+        router.push('/library');
       } catch (err) {
         console.error('[distill] Failed to delete style:', err);
         alert('删除失败，请重试');

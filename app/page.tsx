@@ -41,7 +41,7 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-black mb-4">
-            Zomo Design Office
+            Distill
           </h1>
           <p className="text-2xl text-gray-600 mb-6">
             Decode design, distill style.
@@ -50,10 +50,10 @@ export default function Home() {
             收集、提取、复用、上传任意网站截图或图片，一键提取设计DNA，构建你的风格参考库
           </p>
           <Link
-            href="/extract"
+            href="/analyze"
             className="inline-block bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
           >
-            提取新风格
+            开始分析
           </Link>
         </div>
 
@@ -135,10 +135,10 @@ export default function Home() {
             </p>
             {styles.length === 0 && (
               <Link
-                href="/extract"
+                href="/analyze"
                 className="inline-block bg-black text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
               >
-                提取新风格
+                开始分析
               </Link>
             )}
           </div>

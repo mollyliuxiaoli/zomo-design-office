@@ -14,8 +14,14 @@ export default function Navigation() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
+
+  // Map sub-routes to parent nav item
+  const activeNav = (() => {
+    if (pathname.startsWith('/style/')) return '/library';
+    return pathname;
+  })();
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -31,7 +37,7 @@ export default function Navigation() {
                   key={item.href}
                   href={item.href}
                   className={`text-sm font-medium transition-colors ${
-                    isActive(item.href)
+                    isActive(item.href) || activeNav === item.href
                       ? 'text-black border-b-2 border-black'
                       : 'text-gray-600 hover:text-black'
                   }`}

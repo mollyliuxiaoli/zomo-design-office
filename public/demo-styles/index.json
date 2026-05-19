@@ -1,0 +1,290 @@
+[
+  {
+    "id": "demo-linear",
+    "title": "Linear",
+    "thumbnailUrl": "/demo-styles/linear.svg",
+    "source": { "type": "demo", "label": "Linear — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-linear",
+      "styleName": "Linear",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://linear.app" },
+      "colors": {
+        "background": ["#0a0a0a", "#111111"],
+        "foreground": ["#f5f5f5", "#e5e5e5"],
+        "primary": ["#5e6ad2"],
+        "secondary": ["#8b5cf6"],
+        "accent": ["#a78bfa"],
+        "border": ["#222222", "#333333"],
+        "semantic": { "success": "#4ade80", "warning": "#fbbf24", "danger": "#f87171", "info": "#60a5fa" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "SF Pro"],
+        "scale": "compact",
+        "headingWeight": "600",
+        "bodyWeight": "400",
+        "letterSpacing": "tight",
+        "lineHeight": "compact"
+      },
+      "spacing": { "density": "compact", "baseUnit": "4px" },
+      "radius": { "style": "subtle", "values": ["6px", "8px"] },
+      "shadow": { "style": "none" },
+      "layout": { "composition": "sidebar-main-detail", "container": "full", "alignment": "left", "sectionCount": 3 },
+      "vibe": { "keywords": ["minimal", "dark", "developer-tool", "clean", "modern", "dense"], "description": "Dark, minimal SaaS app with tight spacing and purple accents. Developer-focused with command palette aesthetics." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-stripe",
+    "title": "Stripe",
+    "thumbnailUrl": "/demo-styles/stripe.svg",
+    "source": { "type": "demo", "label": "Stripe — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-stripe",
+      "styleName": "Stripe",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://stripe.com" },
+      "colors": {
+        "background": ["#ffffff", "#f6f9fc"],
+        "foreground": ["#1a1a2e", "#425466"],
+        "primary": ["#635bff"],
+        "secondary": ["#00d4ff"],
+        "accent": ["#0a2540"],
+        "border": ["#e3e8ee", "#d8dee4"],
+        "semantic": { "success": "#30b566", "warning": "#f5a623", "danger": "#df1b41", "info": "#635bff" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Stripe Sans"],
+        "scale": "balanced",
+        "headingWeight": "700",
+        "bodyWeight": "400",
+        "letterSpacing": "normal",
+        "lineHeight": "relaxed"
+      },
+      "spacing": { "density": "comfortable", "baseUnit": "8px" },
+      "radius": { "style": "subtle", "values": ["4px", "8px", "12px"] },
+      "shadow": { "style": "soft" },
+      "layout": { "composition": "header-hero-features-cta-footer", "container": "medium", "alignment": "center", "sectionCount": 5 },
+      "vibe": { "keywords": ["professional", "payment", "clean", "gradient", "corporate", "trustworthy"], "description": "Clean, professional fintech design with purple-to-blue gradients. Trust-building layout with generous whitespace." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-apple",
+    "title": "Apple",
+    "thumbnailUrl": "/demo-styles/apple.svg",
+    "source": { "type": "demo", "label": "Apple — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-apple",
+      "styleName": "Apple",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://apple.com" },
+      "colors": {
+        "background": ["#000000", "#fbfbfd"],
+        "foreground": ["#1d1d1f", "#86868b"],
+        "primary": ["#0071e3"],
+        "secondary": ["#2997ff"],
+        "accent": ["#bf4800"],
+        "border": ["#d2d2d7"],
+        "semantic": { "success": "#30d158", "warning": "#ff9f0a", "danger": "#ff453a", "info": "#0071e3" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["SF Pro Display", "SF Pro Text"],
+        "scale": "display",
+        "headingWeight": "700",
+        "bodyWeight": "400",
+        "letterSpacing": "normal",
+        "lineHeight": "relaxed"
+      },
+      "spacing": { "density": "spacious", "baseUnit": "12px" },
+      "radius": { "style": "rounded", "values": ["12px", "18px", "24px"] },
+      "shadow": { "style": "soft" },
+      "layout": { "composition": "hero-product-features-specs-cta", "container": "wide", "alignment": "center", "sectionCount": 5 },
+      "vibe": { "keywords": ["luxury", "minimal", "premium", "photography", "cinematic", "iconic"], "description": "Ultra-premium, photography-driven design with massive hero images, generous whitespace, and bold typography." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-vercel",
+    "title": "Vercel",
+    "thumbnailUrl": "/demo-styles/vercel.svg",
+    "source": { "type": "demo", "label": "Vercel — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-vercel",
+      "styleName": "Vercel",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://vercel.com" },
+      "colors": {
+        "background": ["#000000", "#0a0a0a"],
+        "foreground": ["#ededed", "#888888"],
+        "primary": ["#ffffff"],
+        "secondary": ["#0070f3"],
+        "accent": ["#7928ca"],
+        "border": ["#222222", "#333333"],
+        "semantic": { "success": "#50e3c2", "warning": "#f5a623", "danger": "#e00", "info": "#0070f3" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Geist"],
+        "scale": "balanced",
+        "headingWeight": "700",
+        "bodyWeight": "400",
+        "letterSpacing": "tight",
+        "lineHeight": "normal"
+      },
+      "spacing": { "density": "comfortable", "baseUnit": "8px" },
+      "radius": { "style": "subtle", "values": ["6px", "8px"] },
+      "shadow": { "style": "soft" },
+      "layout": { "composition": "header-hero-grid-features-cta", "container": "wide", "alignment": "center", "sectionCount": 5 },
+      "vibe": { "keywords": ["dark-mode", "developer", "clean", "gradient", "modern", "tech"], "description": "Dark-first developer platform with blue-to-purple gradient accents. Clean geometry and strong typographic hierarchy." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-notion",
+    "title": "Notion",
+    "thumbnailUrl": "/demo-styles/notion.svg",
+    "source": { "type": "demo", "label": "Notion — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-notion",
+      "styleName": "Notion",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://notion.so" },
+      "colors": {
+        "background": ["#ffffff", "#f7f6f3"],
+        "foreground": ["#37352f", "#787774"],
+        "primary": ["#2383e2"],
+        "secondary": ["#9b9a97"],
+        "accent": ["#d3adc4"],
+        "border": ["#e9e9e7", "#e3e2de"],
+        "semantic": { "success": "#4dab9a", "warning": "#cb912f", "danger": "#d44c47", "info": "#2383e2" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Notion Sans"],
+        "scale": "balanced",
+        "headingWeight": "700",
+        "bodyWeight": "400",
+        "letterSpacing": "normal",
+        "lineHeight": "relaxed"
+      },
+      "spacing": { "density": "comfortable", "baseUnit": "8px" },
+      "radius": { "style": "subtle", "values": ["4px", "6px"] },
+      "shadow": { "style": "none" },
+      "layout": { "composition": "sidebar-content-detail", "container": "medium", "alignment": "left", "sectionCount": 3 },
+      "vibe": { "keywords": ["warm", "document", "editorial", "organic", "clean", "productive"], "description": "Warm, document-centric design with a paper-like off-white background. Block-based content editor with subtle interactions." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-tailwindcss",
+    "title": "Tailwind CSS",
+    "thumbnailUrl": "/demo-styles/tailwindcss.svg",
+    "source": { "type": "demo", "label": "Tailwind CSS — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-tailwindcss",
+      "styleName": "Tailwind CSS",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://tailwindcss.com" },
+      "colors": {
+        "background": ["#0f172a", "#1e293b"],
+        "foreground": ["#e2e8f0", "#94a3b8"],
+        "primary": ["#38bdf8"],
+        "secondary": ["#818cf8"],
+        "accent": ["#c084fc"],
+        "border": ["#334155", "#475569"],
+        "semantic": { "success": "#4ade80", "warning": "#fbbf24", "danger": "#f87171", "info": "#38bdf8" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Fira Code"],
+        "scale": "balanced",
+        "headingWeight": "800",
+        "bodyWeight": "400",
+        "letterSpacing": "tight",
+        "lineHeight": "normal"
+      },
+      "spacing": { "density": "comfortable", "baseUnit": "8px" },
+      "radius": { "style": "subtle", "values": ["6px", "8px", "12px"] },
+      "shadow": { "style": "soft" },
+      "layout": { "composition": "sidebar-content", "container": "wide", "alignment": "left", "sectionCount": 2 },
+      "vibe": { "keywords": ["developer", "utility-first", "dark", "code", "documentation", "modern"], "description": "Dark documentation site with sky-blue primary and indigo accents. Code-heavy layout with clean sidebar navigation." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-github",
+    "title": "GitHub",
+    "thumbnailUrl": "/demo-styles/github.svg",
+    "source": { "type": "demo", "label": "GitHub — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-github",
+      "styleName": "GitHub",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://github.com" },
+      "colors": {
+        "background": ["#0d1117", "#161b22"],
+        "foreground": ["#c9d1d9", "#8b949e"],
+        "primary": ["#58a6ff"],
+        "secondary": ["#7ee787"],
+        "accent": ["#d2a8ff"],
+        "border": ["#21262d", "#30363d"],
+        "semantic": { "success": "#3fb950", "warning": "#d29922", "danger": "#f85149", "info": "#58a6ff" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Segoe UI"],
+        "scale": "compact",
+        "headingWeight": "600",
+        "bodyWeight": "400",
+        "letterSpacing": "normal",
+        "lineHeight": "normal"
+      },
+      "spacing": { "density": "compact", "baseUnit": "4px" },
+      "radius": { "style": "subtle", "values": ["6px"] },
+      "shadow": { "style": "none" },
+      "layout": { "composition": "header-sidebar-main", "container": "wide", "alignment": "left", "sectionCount": 3 },
+      "vibe": { "keywords": ["developer", "code", "repository", "functional", "dense", "monochrome"], "description": "Functional dark-mode developer platform. Dense information layout with blue links, green diffs, and purple merge highlights." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  },
+  {
+    "id": "demo-framer",
+    "title": "Framer",
+    "thumbnailUrl": "/demo-styles/framer.svg",
+    "source": { "type": "demo", "label": "Framer — inspired by public visual characteristics" },
+    "spec": {
+      "specVersion": "1.0",
+      "styleId": "demo-framer",
+      "styleName": "Framer",
+      "source": { "type": "url", "createdAt": "2026-05-19T00:00:00Z", "model": "curated", "originalUrl": "https://framer.com" },
+      "colors": {
+        "background": ["#ffffff", "#f5f5f5"],
+        "foreground": ["#111111", "#666666"],
+        "primary": ["#0055ff"],
+        "secondary": ["#0099ff"],
+        "accent": ["#8855ff"],
+        "border": ["#e5e5e5", "#d4d4d4"],
+        "semantic": { "success": "#22c55e", "warning": "#f59e0b", "danger": "#ef4444", "info": "#0055ff" }
+      },
+      "typography": {
+        "fontStyle": "sans",
+        "suggestedFonts": ["Inter", "Framer Sans"],
+        "scale": "display",
+        "headingWeight": "800",
+        "bodyWeight": "400",
+        "letterSpacing": "tight",
+        "lineHeight": "compact"
+      },
+      "spacing": { "density": "comfortable", "baseUnit": "8px" },
+      "radius": { "style": "rounded", "values": ["12px", "16px", "24px"] },
+      "shadow": { "style": "soft" },
+      "layout": { "composition": "hero-showcase-features-templates-cta", "container": "wide", "alignment": "center", "sectionCount": 5 },
+      "vibe": { "keywords": ["creative", "design-tool", "animation", "modern", "playful", "showcase"], "description": "Creative design tool with bold blue primary, playful animations, and template showcase. Rounded corners and soft shadows throughout." },
+      "meta": { "confidence": 95, "rendererVersion": "1.0", "promptVersion": "1.0" }
+    }
+  }
+]
