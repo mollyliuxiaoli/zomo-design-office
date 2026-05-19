@@ -31,53 +31,122 @@ async function compressImage(dataUrl: string, maxWidth: number, quality: number)
   });
 }
 
-/** Read SSE stream and return the final record */
-async function readSSEResponse(response: Response): Promise<LibraryRecord> {
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+/** Call APImart vision API directly from browser (bypasses Vercel timeout) */
+async function callVisionAPI(imageBase64: string, apiKey: string): Promise<Partial<StyleSpecV1Input>> {
+  const response = await fetch('https://api.apimart.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gemini-2.5-flash',
+      stream: false,
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this design image and return ONLY valid JSON, no markdown and no explanation.
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+Return a StyleSpecV1-compatible partial object. Use this exact shape and enum values:
+{
+  "styleName": "short style name",
+  "source": { "type": "image", "model": "gemini-2.5-flash" },
+  "colors": {
+    "background": ["#ffffff"],
+    "foreground": ["#111827"],
+    "primary": ["#2563eb"],
+    "secondary": ["#7c3aed"],
+    "accent": ["#f59e0b"],
+    "border": ["#e5e7eb"],
+    "semantic": { "success": "#16a34a", "warning": "#d97706", "danger": "#dc2626", "info": "#0284c7" }
+  },
+  "typography": {
+    "fontStyle": "sans",
+    "suggestedFonts": ["Inter", "Arial"],
+    "scale": "balanced",
+    "headingWeight": "700",
+    "bodyWeight": "400",
+    "letterSpacing": "normal",
+    "lineHeight": "normal"
+  },
+  "spacing": { "density": "comfortable", "baseUnit": "8px" },
+  "radius": { "style": "subtle", "values": ["4px", "8px", "16px"] },
+  "shadow": { "style": "soft" },
+  "layout": {
+    "composition": "header-hero-features-cta-footer",
+    "container": "medium",
+    "alignment": "mixed",
+    "sectionCount": 5,
+    "sections": [
+      { "position": "header", "description": "navigation description", "content": ["visible text"] }
+    ]
+  },
+  "components": { "buttons": "button style", "cards": "card style", "navigation": "navigation style" },
+  "vibe": { "keywords": ["minimal", "modern", "clean"], "description": "overall style description", "avoid": ["visual choices to avoid"] },
+  "content": { "headings": ["heading text"], "bodyText": ["body text"], "buttons": ["button text"] },
+  "meta": { "confidence": 85, "warnings": [] }
+}
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+Rules:
+- Hex colors must be valid #RGB or #RRGGBB values when possible.
+- If a field is uncertain, provide a reasonable default and add a warning in meta.warnings.
+- Do not include derived, cssVariables, markdown, or restorationPrompt.`,
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageBase64 },
+            },
+          ],
+        },
+      ],
+    }),
+  });
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'complete' && parsed.record) {
-          return parsed.record as LibraryRecord;
-        }
-        if (parsed.type === 'error') {
-          throw new Error(parsed.error || '分析失败');
-        }
-      } catch (err) {
-        // Re-throw explicit errors
-        if (err instanceof Error && err.message !== '分析失败' && !data.startsWith('{')) continue;
-        if (err instanceof Error && err.message === '分析失败') throw err;
-        if (err instanceof Error) throw err;
-      }
-    }
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`AI API 错误: ${response.status} - ${error.slice(0, 200)}`);
   }
 
-  throw new Error('连接中断，请重试');
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // Parse JSON from response
+  return parseJSONFromResponse(content);
+}
+
+/** Robust JSON parser for AI responses */
+function parseJSONFromResponse(text: string): Record<string, unknown> {
+  if (!text) throw new Error('AI 返回为空');
+
+  try { return JSON.parse(text); } catch {}
+
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1]); } catch {}
+  }
+
+  const braceStart = text.indexOf('{');
+  const braceEnd = text.lastIndexOf('}');
+  if (braceStart !== -1 && braceEnd > braceStart) {
+    try { return JSON.parse(text.substring(braceStart, braceEnd + 1)); } catch {}
+  }
+
+  throw new Error(`无法解析 AI 响应 (长度=${text.length})`);
 }
 
 export default function AnalyzePage() {
   const router = useRouter();
   const [mode, setMode] = useState<AnalyzeMode>('image');
-  const [imageUrl, setImageUrl] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string>('');
-  const [targetUrl, setTargetUrl] = useState('');
+
   const [styleName, setStyleName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [targetUrl, setTargetUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
@@ -117,13 +186,10 @@ export default function AnalyzePage() {
     setProgress('[1/3] 准备分析...');
 
     try {
-      let apiEndpoint: string;
-      let requestBody: Record<string, unknown>;
+      let imagePayload = preview;
 
-      // For image/screenshot modes, resolve remote URLs to base64
-      let imagePayload = preview; // already base64 from file upload
+      // For remote image URLs, download first
       if ((mode === 'image' || mode === 'screenshot') && imageUrl && !imagePayload?.startsWith('data:')) {
-        // Fetch remote image and convert to base64
         setProgress('[1/3] 下载图片...');
         try {
           const imgRes = await fetch(imageUrl);
@@ -139,73 +205,66 @@ export default function AnalyzePage() {
         }
       }
 
-      // Compress image if too large (>800px width) to fit within API timeout
+      // Compress image
       if (imagePayload?.startsWith('data:image/')) {
         setProgress('[1/3] 压缩图片...');
         imagePayload = await compressImage(imagePayload, 800, 0.8);
       }
 
-      if (mode === 'url') {
-        apiEndpoint = '/api/reverse-page';
-        requestBody = { url: targetUrl, type: 'url' };
-        setProgress('[2/3] 抓取网页并分析视觉系统...');
-      } else {
-        apiEndpoint = mode === 'screenshot' ? '/api/reverse-page' : '/api/analyze-style';
-        const image = preview;
-        if (mode === 'screenshot') {
-          requestBody = { image: imagePayload, type: 'image' };
-        } else {
-          requestBody = { image: imagePayload, name: styleName || undefined };
-        }
-        setProgress('[2/3] AI 分析视觉系统...');
-      }
-
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: '分析失败' }));
-        throw new Error(errorData.error || '分析失败');
-      }
-
-      // Check if response is SSE stream (for image/screenshot modes) or JSON (for URL mode)
-      const contentType = response.headers.get('content-type') || '';
       let savedRecord: LibraryRecord;
 
-      if (contentType.includes('text/event-stream')) {
-        // Read SSE stream
-        setProgress('[2/3] AI 正在分析，请稍候...');
-        const streamRecord = await readSSEResponse(response);
-        savedRecord = await styleRepo.save(streamRecord);
-      } else {
-        // Direct JSON response (URL mode)
-        setProgress('[3/3] 处理结果...');
-        const analyzedStyle = await response.json();
+      if (mode === 'url') {
+        // URL mode: use server-side scraper (fast, no timeout issue)
+        setProgress('[2/3] 抓取网页并分析视觉系统...');
+        const response = await fetch('/api/reverse-page', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: targetUrl }),
+        });
 
-        // URL mode returns { record, spec }
-        if (analyzedStyle.record) {
-          savedRecord = await styleRepo.save(analyzedStyle.record);
-        } else {
-          // Fallback for old-style responses
-          const rawSpec = (analyzedStyle.spec || analyzedStyle) as StyleSpecV1Input;
-          const fullSpec = withDerived(normalizeSpec(rawSpec));
-          const id = fullSpec.styleId || Date.now().toString();
-          const createdAt = new Date().toISOString();
-          const record: LibraryRecord = {
-            id,
-            spec: fullSpec,
-            source: { type: 'user', label: file?.name || imageUrl || targetUrl || undefined },
-            title: styleName || fullSpec.styleName || 'Analyzed Style',
-            thumbnailUrl: preview || '',
-            createdAt,
-            updatedAt: createdAt,
-            visibility: 'private',
-          };
-          savedRecord = await styleRepo.save(record);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: '分析失败' }));
+          throw new Error(errorData.error || '分析失败');
         }
+
+        const result = await response.json();
+        if (result.record) {
+          savedRecord = await styleRepo.save(result.record);
+        } else {
+          throw new Error('服务器返回数据格式异常');
+        }
+      } else {
+        // Image/screenshot mode: call AI directly from browser (bypasses Vercel timeout)
+        setProgress('[2/3] AI 分析中，请耐心等待（约 30-60 秒）...');
+
+        // Get API key from server
+        const tokenRes = await fetch('/api/token');
+        if (!tokenRes.ok) throw new Error('无法获取 API 授权');
+        const { key } = await tokenRes.json();
+
+        // Call AI directly
+        const rawSpec = await callVisionAPI(imagePayload!, key);
+
+        const fullSpec = withDerived(normalizeSpec(rawSpec as StyleSpecV1Input));
+        const id = fullSpec.styleId || Date.now().toString();
+        const createdAt = new Date().toISOString();
+
+        const record: LibraryRecord = {
+          id,
+          spec: fullSpec,
+          source: {
+            type: 'user',
+            label: file?.name || imageUrl || 'image upload',
+          },
+          title: styleName || fullSpec.styleName || 'Analyzed Style',
+          thumbnailUrl: preview || '',
+          createdAt,
+          updatedAt: createdAt,
+          visibility: 'private',
+        };
+
+        setProgress('[3/3] 保存结果...');
+        savedRecord = await styleRepo.save(record);
       }
 
       router.push(`/style/${savedRecord.id}`);
@@ -223,152 +282,140 @@ export default function AnalyzePage() {
       <Navigation />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-black mb-4">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             分析风格
           </h1>
-          <p className="text-lg text-gray-600">
-            上传截图、输入图片 URL 或网页 URL，Distill 会自动提取设计 DNA
+          <p className="text-gray-500">
+            上传截图或输入 URL，AI 提取视觉风格系统
           </p>
         </div>
 
-        {/* Mode selector */}
-        <div className="flex gap-2 mb-6">
-          {([
-            { key: 'image', label: '📷 图片分析', desc: '上传设计图' },
-            { key: 'screenshot', label: '🖼️ 截图还原', desc: '上传页面截图' },
-            { key: 'url', label: '🔗 网页分析', desc: '输入网页 URL' },
-          ] as const).map(({ key, label }) => (
+        {/* Mode Selector */}
+        <div className="flex justify-center gap-2 mb-8">
+          {[
+            { key: 'image' as const, label: '图片分析' },
+            { key: 'screenshot' as const, label: '截图还原' },
+            { key: 'url' as const, label: '网页分析' },
+          ].map((m) => (
             <button
-              key={key}
-              onClick={() => { setMode(key); setError(''); setPreview(''); }}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-colors ${
-                mode === key
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                mode === m.key
                   ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {label}
+              {m.label}
             </button>
           ))}
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-8 mb-8">
-          {/* URL mode */}
-          {mode === 'url' && (
+        {/* Style Name */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            风格名称（可选）
+          </label>
+          <input
+            type="text"
+            value={styleName}
+            onChange={(e) => setStyleName(e.target.value)}
+            placeholder="例如：Minimalist Dashboard"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {(mode === 'image' || mode === 'screenshot') && (
+          <>
+            {/* File Upload */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                网页 URL
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                上传图片
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+
+            <div className="text-center text-gray-400 text-sm mb-4">或</div>
+
+            {/* Image URL */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                图片 URL
               </label>
               <input
                 type="url"
-                value={targetUrl}
-                onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="https://linear.app"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                value={imageUrl}
+                onChange={handleImageUrlChange}
+                placeholder="https://example.com/screenshot.png"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-          )}
 
-          {/* Image / Screenshot mode */}
-          {(mode === 'image' || mode === 'screenshot') && (
-            <>
+            {/* Preview */}
+            {preview && (
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  图片 URL
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  图片预览
                 </label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={handleImageUrlChange}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="max-w-full max-h-80 mx-auto"
+                  />
+                </div>
               </div>
+            )}
+          </>
+        )}
 
-              <div className="text-center text-gray-500 mb-6">或</div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  上传图片
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Style name */}
+        {mode === 'url' && (
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              风格名称（可选）
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              网页 URL
             </label>
             <input
-              type="text"
-              value={styleName}
-              onChange={(e) => setStyleName(e.target.value)}
-              placeholder="例如：现代极简风格"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+              type="url"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              placeholder="https://linear.app"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+        )}
 
-          {/* Preview */}
-          {preview && (mode === 'image' || mode === 'screenshot') && (
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                图片预览
-              </label>
-              <div className="aspect-video bg-white rounded-lg overflow-hidden border border-gray-200">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-          )}
+        {/* Error */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
 
-          {/* Error */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              {error}
-            </div>
-          )}
+        {/* Progress */}
+        {progress && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+            {progress}
+          </div>
+        )}
 
-          {/* Progress */}
-          {loading && progress && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
-              {progress}
-            </div>
-          )}
+        {/* Submit */}
+        <button
+          onClick={handleAnalyze}
+          disabled={loading}
+          className="w-full py-3 px-6 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? '分析中...' : '开始分析'}
+        </button>
 
-          {/* Analyze button */}
-          <button
-            onClick={handleAnalyze}
-            disabled={loading || (mode === 'url' ? !targetUrl : !preview)}
-            className={`w-full py-4 rounded-lg font-semibold text-white transition-colors ${
-              loading || (mode === 'url' ? !targetUrl : !preview)
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-black hover:bg-gray-800'
-            }`}
-          >
-            {loading ? '分析中...' : '开始分析'}
-          </button>
-        </div>
-
-        {/* Instructions */}
-        <div className="bg-blue-50 rounded-lg p-6">
-          <h3 className="font-semibold text-black mb-3">使用说明</h3>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li>• <strong>图片分析</strong> — 上传设计稿或参考图，提取颜色、排版、风格标签</li>
-            <li>• <strong>截图还原</strong> — 上传页面截图，生成 CSS 变量 + 还原 Prompt</li>
-            <li>• <strong>网页分析</strong> — 输入 URL，自动抓取页面并分析视觉系统</li>
-            <li>• 分析完成后会自动跳转到详情页，可编辑、导出、分享</li>
-          </ul>
+        {/* Usage Instructions */}
+        <div className="mt-12 text-center text-gray-400 text-sm">
+          使用说明
         </div>
       </div>
     </div>
