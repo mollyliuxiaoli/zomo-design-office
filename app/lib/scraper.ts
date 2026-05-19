@@ -30,6 +30,19 @@ export async function scrapeUrl(url: string): Promise<ScrapedData> {
     throw new Error('Only HTTP and HTTPS protocols are supported');
   }
 
+  // SSRF protection: block private/internal hosts
+  const hostname = validUrl.hostname.toLowerCase();
+  const blockedHosts = [
+    'localhost', '127.0.0.1', '0.0.0.0', '::1',
+    '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+    '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+    '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+    '192.168.',
+  ];
+  if (blockedHosts.some(h => hostname === h || hostname.startsWith(h))) {
+    throw new Error('Cannot scrape internal/private URLs');
+  }
+
   // Fetch the webpage
   const response = await fetch(url, {
     headers: {

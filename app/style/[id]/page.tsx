@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import { styleRepo } from '../../lib/storage/repo';
@@ -17,7 +17,7 @@ export default function StyleDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [draftSpec, setDraftSpec] = useState<StyleSpecV1 | null>(null);
 
   useEffect(() => {
@@ -67,8 +67,22 @@ export default function StyleDetailPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600">加载中...</p>
+          {error ? (
+            <>
+              <p className="text-red-600 text-lg mb-4">{error}</p>
+              <button
+                onClick={() => router.push('/library')}
+                className="bg-black text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-800"
+              >
+                返回风格库
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4" />
+              <p className="text-gray-600">加载中...</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -87,9 +101,9 @@ export default function StyleDetailPage() {
     setDraftSpec(updatedSpec);
 
     // Debounced persistence (500ms)
-    if (saveTimer) clearTimeout(saveTimer);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSaveStatus('saving');
-    const timer = setTimeout(async () => {
+    saveTimerRef.current = setTimeout(async () => {
       try {
         const updatedRecord = await styleRepo.update(style!.id, { spec: updatedSpec });
         if (updatedRecord) {
@@ -103,8 +117,14 @@ export default function StyleDetailPage() {
         setSaveStatus('error');
       }
     }, 500);
-    setSaveTimer(timer);
-  }, [style, saveTimer]);
+  }, [style]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">

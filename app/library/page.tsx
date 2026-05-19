@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import { styleRepo } from '../lib/storage/repo';
 import type { LibraryRecord } from '../lib/storage/db';
+import { migrateIfNeeded } from '../lib/storage/migrate';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function LibraryPage() {
 
   const loadStyles = async () => {
     try {
+      await migrateIfNeeded(); // Migrate localStorage → IndexedDB
       const savedStyles = await styleRepo.listAll();
       setStyles(savedStyles);
       setError(null);

@@ -46,7 +46,7 @@ export default function AnalyzePage() {
       setError('请输入网页 URL');
       return;
     }
-    if ((mode === 'image' || mode === 'screenshot') && !preview) {
+    if ((mode === 'image' || mode === 'screenshot') && !preview && !imageUrl) {
       setError('请先上传图片或输入图片 URL');
       return;
     }
@@ -59,6 +59,25 @@ export default function AnalyzePage() {
       let apiEndpoint: string;
       let requestBody: Record<string, unknown>;
 
+      // For image/screenshot modes, resolve remote URLs to base64
+      let imagePayload = preview; // already base64 from file upload
+      if ((mode === 'image' || mode === 'screenshot') && imageUrl && !imagePayload?.startsWith('data:')) {
+        // Fetch remote image and convert to base64
+        setProgress('[1/3] 下载图片...');
+        try {
+          const imgRes = await fetch(imageUrl);
+          const blob = await imgRes.blob();
+          imagePayload = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          throw new Error('无法下载图片，请直接上传文件');
+        }
+      }
+
       if (mode === 'url') {
         apiEndpoint = '/api/reverse-page';
         requestBody = { url: targetUrl, type: 'url' };
@@ -67,9 +86,9 @@ export default function AnalyzePage() {
         apiEndpoint = mode === 'screenshot' ? '/api/reverse-page' : '/api/analyze-style';
         const image = preview;
         if (mode === 'screenshot') {
-          requestBody = { image, type: 'image' };
+          requestBody = { image: imagePayload, type: 'image' };
         } else {
-          requestBody = { image, name: styleName || undefined };
+          requestBody = { image: imagePayload, name: styleName || undefined };
         }
         setProgress('[2/3] AI 分析视觉系统...');
       }

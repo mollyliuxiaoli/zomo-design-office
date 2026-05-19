@@ -1,11 +1,29 @@
 import { styleRepo } from '@/app/lib/storage/repo';
 import type { LibraryRecord } from '@/app/lib/storage/db';
 import { normalizeSpec, withDerived, type StyleSpecV1Input } from '@/app/lib/ai-client';
-import type { Style } from '@/types/style';
 
 const STORAGE_KEY = 'zomo_styles';
 
-// Idempotency guard — migration runs only once per session
+// Legacy Style type (local copy for migration only)
+interface LegacyStyle {
+  id: string;
+  name: string;
+  typography?: { headings?: string; body?: string; description?: string };
+  colors?: { primary?: string[]; secondary?: string[]; background?: string[]; text?: string[]; accent?: string[] };
+  visualStyle?: string[];
+  styleTags?: string[];
+  layout?: { type?: string; spacing?: string; gridSize?: string };
+  projectType?: string;
+  images?: string[];
+  imageUrl?: string;
+  description?: string;
+  cssContent?: string;
+  markdownContent?: string;
+  promptContent?: string;
+  createdAt?: string;
+}
+
+// Idempotency guard
 let migrationPromise: Promise<number> | undefined;
 
 function stringArray(value: unknown): string[] {
@@ -14,17 +32,13 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
-function isValidLegacyStyle(value: unknown): value is Style {
+function isValidLegacyStyle(value: unknown): value is LegacyStyle {
   if (!value || typeof value !== 'object') return false;
   const obj = value as Record<string, unknown>;
   return typeof obj.id === 'string' && typeof obj.name === 'string';
 }
 
-/**
- * Map legacy Style.typography { headings, body, description }
- * to StyleSpecV1.typography { fontStyle, suggestedFonts, ... }
- */
-function mapLegacyTypography(typo: Style['typography']): StyleSpecV1Input['typography'] {
+function mapLegacyTypography(typo: LegacyStyle['typography']): StyleSpecV1Input['typography'] {
   return {
     fontStyle: 'sans',
     suggestedFonts: [
@@ -39,7 +53,7 @@ function mapLegacyTypography(typo: Style['typography']): StyleSpecV1Input['typog
   };
 }
 
-function oldStyleToRecord(style: Style): LibraryRecord {
+function oldStyleToRecord(style: LegacyStyle): LibraryRecord {
   const createdAt = style.createdAt || new Date().toISOString();
   const keywords = Array.from(new Set([
     ...stringArray(style.visualStyle),

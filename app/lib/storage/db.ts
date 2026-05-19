@@ -39,5 +39,4 @@ export function getDb(): DistillDatabase {
   return _db;
 }
 
-// Convenience export for callers that know they're client-side
-export const db = typeof window !== 'undefined' ? new DistillDatabase() : (undefined as unknown as DistillDatabase);
+// Always use getDb() for safe SSR. Do NOT import db directly.
