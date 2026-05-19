@@ -10,6 +10,11 @@ function first(values: string[] | undefined, fallback: string): string {
   return values && values.length > 0 ? values[0] : fallback;
 }
 
+/** Safely escape a string for JS template output */
+function esc(value: string): string {
+  return JSON.stringify(value);
+}
+
 function fontFamily(spec: StyleSpecV1): { heading: string; body: string } {
   const heading = first(spec.typography.suggestedFonts, 'Inter');
   const body = spec.typography.suggestedFonts[1] || heading;
@@ -40,7 +45,6 @@ function radiusPreset(style: StyleSpecV1['radius']['style']): { sm: string; md: 
   if (style === 'sharp') return { sm: '0', md: '0', lg: '0', full: '9999px' };
   if (style === 'subtle') return { sm: '0.25rem', md: '0.375rem', lg: '0.5rem', full: '9999px' };
   if (style === 'rounded') return { sm: '0.5rem', md: '0.75rem', lg: '1rem', full: '9999px' };
-  // pill
   return { sm: '1rem', md: '1.5rem', lg: '2rem', full: '9999px' };
 }
 
@@ -48,7 +52,6 @@ function shadowPreset(style: StyleSpecV1['shadow']['style']): { sm: string; md: 
   if (style === 'none') return { sm: 'none', md: 'none', lg: 'none' };
   if (style === 'crisp') return { sm: '0 1px 2px rgba(0,0,0,0.1)', md: '0 2px 4px rgba(0,0,0,0.12)', lg: '0 4px 8px rgba(0,0,0,0.15)' };
   if (style === 'dramatic') return { sm: '0 4px 12px rgba(0,0,0,0.15)', md: '0 12px 40px rgba(0,0,0,0.2)', lg: '0 24px 60px rgba(0,0,0,0.25)' };
-  // soft
   return { sm: '0 1px 3px rgba(15,23,42,0.08)', md: '0 4px 12px rgba(15,23,42,0.1)', lg: '0 12px 30px rgba(15,23,42,0.12)' };
 }
 
@@ -64,62 +67,73 @@ export function renderTailwindConfig(spec: StyleSpecV1): string {
   const radii = radiusPreset(spec.radius.style);
   const shadows = shadowPreset(spec.shadow.style);
 
+  const bg = esc(first(spec.colors.background, '#ffffff'));
+  const fg = esc(first(spec.colors.foreground, '#0f172a'));
+  const fgMuted = esc(spec.colors.foreground[1] || '#64748b');
+  const primary = esc(first(spec.colors.primary, '#2563eb'));
+  const primaryHover = spec.colors.primary[1] ? `\n          hover: ${esc(spec.colors.primary[1])},` : '';
+  const secondary = esc(first(spec.colors.secondary, '#7c3aed'));
+  const accent = esc(first(spec.colors.accent, '#f59e0b'));
+  const borderColor = esc(first(spec.colors.border, '#e2e8f0'));
+  const sem = spec.colors.semantic;
+  const semanticBlock = sem ? `
+        success: ${esc(sem.success || '#16a34a')},
+        warning: ${esc(sem.warning || '#d97706')},
+        danger: ${esc(sem.danger || '#dc2626')},
+        info: ${esc(sem.info || '#0284c7')},` : '';
+  const baseSpacing = esc(spec.spacing.baseUnit || (spec.spacing.density === 'compact' ? '0.75rem' : spec.spacing.density === 'spacious' ? '1.5rem' : '1rem'));
+
   return `import type { Config } from 'tailwindcss';
 
 const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '${first(spec.colors.background, '#ffffff')}',
-        foreground: '${first(spec.colors.foreground, '#0f172a')}',
-        muted: '${spec.colors.foreground[1] || '#64748b'}',
+        background: ${bg},
+        foreground: ${fg},
+        muted: ${fgMuted},
         primary: {
-          DEFAULT: '${first(spec.colors.primary, '#2563eb')}',
-          ${spec.colors.primary[1] ? `hover: '${spec.colors.primary[1]}',` : ''}
+          DEFAULT: ${primary},${primaryHover}
         },
         secondary: {
-          DEFAULT: '${first(spec.colors.secondary, '#7c3aed')}',
+          DEFAULT: ${secondary},
         },
-        accent: '${first(spec.colors.accent, '#f59e0b')}',
-        border: '${first(spec.colors.border, '#e2e8f0')}',
-        ${spec.colors.semantic ? `success: '${spec.colors.semantic.success || '#16a34a'}',
-        warning: '${spec.colors.semantic.warning || '#d97706'}',
-        danger: '${spec.colors.semantic.danger || '#dc2626'}',
-        info: '${spec.colors.semantic.info || '#0284c7'}',` : ''}
+        accent: ${accent},
+        border: ${borderColor},${semanticBlock}
       },
       fontFamily: {
-        heading: ['${fonts.heading}', 'sans-serif'],
-        body: ['${fonts.body}', 'sans-serif'],
+        heading: [${esc(fonts.heading)}, 'sans-serif'],
+        body: [${esc(fonts.body)}, 'sans-serif'],
       },
       fontWeight: {
-        heading: '${spec.typography.headingWeight}',
-        body: '${spec.typography.bodyWeight}',
+        heading: ${esc(spec.typography.headingWeight)},
+        body: ${esc(spec.typography.bodyWeight)},
       },
       letterSpacing: {
-        tight: '${letterSpacingValue('tight')}',
-        normal: '${letterSpacingValue('normal')}',
-        wide: '${letterSpacingValue('wide')}',
-        spec: '${letterSpacingValue(spec.typography.letterSpacing)}',
+        tight: ${esc(letterSpacingValue('tight'))},
+        normal: ${esc(letterSpacingValue('normal'))},
+        wide: ${esc(letterSpacingValue('wide'))},
+        spec: ${esc(letterSpacingValue(spec.typography.letterSpacing))},
       },
       lineHeight: {
-        spec: '${lineHeightValue(spec.typography.lineHeight)}',
+        spec: ${esc(lineHeightValue(spec.typography.lineHeight))},
       },
       borderRadius: {
-        sm: '${radii.sm}',
-        md: '${radii.md}',
-        lg: '${radii.lg}',
-        full: '${radii.full}',
+        sm: ${esc(radii.sm)},
+        md: ${esc(radii.md)},
+        lg: ${esc(radii.lg)},
+        full: ${esc(radii.full)},
       },
       boxShadow: {
-        sm: '${shadows.sm}',
-        md: '${shadows.md}',
-        lg: '${shadows.lg}',
+        sm: ${esc(shadows.sm)},
+        md: ${esc(shadows.md)},
+        lg: ${esc(shadows.lg)},
       },
       maxWidth: {
-        container: '${containerMaxWidth(spec.layout.container)}',
+        container: ${esc(containerMaxWidth(spec.layout.container))},
       },
       spacing: {
-        base: '${spec.spacing.baseUnit || (spec.spacing.density === 'compact' ? '0.75rem' : spec.spacing.density === 'spacious' ? '1.5rem' : '1rem')}',
+        base: ${baseSpacing},
       },
     },
   },

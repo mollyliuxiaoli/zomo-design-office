@@ -93,6 +93,39 @@ export default function StyleDetailPage() {
   const cssContent = spec.derived?.cssVariables || '';
   const promptContent = spec.derived?.restorationPrompt || '';
 
+  // Unified content getter for both preview and copy
+  const getTabContent = (tab: typeof activeTab): string => {
+    if (tab === 'markdown') return markdownContent;
+    if (tab === 'css') return cssContent;
+    if (tab === 'prompt') return promptContent;
+    if (tab === 'tailwind') {
+      const parts: string[] = [];
+      if (spec.derived?.tailwindConfig) {
+        parts.push(spec.derived.tailwindConfig);
+      }
+      if (spec.derived?.tailwindExample) {
+        if (parts.length) parts.push('', '/* --- Usage Example --- */', '');
+        parts.push(spec.derived.tailwindExample);
+      }
+      return parts.join('\n');
+    }
+    if (tab === 'shadcn') {
+      const parts: string[] = [];
+      if (spec.derived?.shadcnTheme) {
+        parts.push(spec.derived.shadcnTheme);
+      }
+      if (spec.derived?.shadcnConfig) {
+        if (parts.length) parts.push('', '/* --- components.json --- */', '');
+        parts.push(spec.derived.shadcnConfig);
+      }
+      return parts.join('\n');
+    }
+    return '';
+  };
+
+  // Clamped confidence for display
+  const confidence = Math.max(0, Math.min(100, spec.meta?.confidence ?? 0));
+
   // The effective spec shown in editor (draft takes priority)
   const editorSpec = draftSpec || spec;
 
@@ -160,26 +193,33 @@ export default function StyleDetailPage() {
               {/* Confidence visualization */}
               <div className="mt-4 flex items-center gap-3">
                 <span className="text-xs text-gray-500">分析置信度</span>
-                <div className="flex-1 max-w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="flex-1 max-w-48 h-2 bg-gray-200 rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={confidence}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`分析置信度: ${confidence}%`}
+                >
                   <div
                     className={`h-full rounded-full transition-all ${
-                      (spec.meta.confidence || 0) >= 80
+                      confidence >= 80
                         ? 'bg-green-500'
-                        : (spec.meta.confidence || 0) >= 50
+                        : confidence >= 50
                         ? 'bg-yellow-500'
                         : 'bg-red-500'
                     }`}
-                    style={{ width: `${spec.meta.confidence || 0}%` }}
+                    style={{ width: `${confidence}%` }}
                   />
                 </div>
                 <span className={`text-xs font-semibold ${
-                  (spec.meta.confidence || 0) >= 80
+                  confidence >= 80
                     ? 'text-green-600'
-                    : (spec.meta.confidence || 0) >= 50
+                    : confidence >= 50
                     ? 'text-yellow-600'
                     : 'text-red-600'
                 }`}>
-                  {spec.meta.confidence || 0}%
+                  {confidence >= 80 ? '高' : confidence >= 50 ? '中' : '低'} {confidence}%
                 </span>
               </div>
             </div>
@@ -388,31 +428,13 @@ export default function StyleDetailPage() {
             {/* Content Display */}
             <div className="bg-gray-50 rounded-lg p-6 mb-4">
               <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono overflow-x-auto">
-                {activeTab === 'markdown' && markdownContent}
-                {activeTab === 'css' && cssContent}
-                {activeTab === 'prompt' && promptContent}
-                {activeTab === 'tailwind' && (spec.derived?.tailwindConfig || spec.derived?.tailwindExample || '')}
-                {activeTab === 'shadcn' && (spec.derived?.shadcnTheme || spec.derived?.shadcnConfig || '')}
+                {getTabContent(activeTab)}
               </pre>
             </div>
 
             {/* Copy Button */}
             <button
-              onClick={() => {
-                const tailwindContent = [spec.derived?.tailwindConfig, '', '// --- Usage Example ---', '', spec.derived?.tailwindExample].filter(Boolean).join('\n');
-                const shadcnContent = [spec.derived?.shadcnTheme, '', '// --- components.json ---', '', spec.derived?.shadcnConfig].filter(Boolean).join('\n');
-                const content =
-                  activeTab === 'markdown'
-                    ? markdownContent
-                    : activeTab === 'css'
-                    ? cssContent
-                    : activeTab === 'prompt'
-                    ? promptContent
-                    : activeTab === 'tailwind'
-                    ? tailwindContent
-                    : shadcnContent;
-                handleCopy(content);
-              }}
+              onClick={() => handleCopy(getTabContent(activeTab))}
               className={`w-full py-3 rounded-lg font-semibold transition-colors ${
                 copied
                   ? 'bg-green-500 text-white'

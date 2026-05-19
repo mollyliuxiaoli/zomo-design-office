@@ -14,8 +14,13 @@ function first(values: string[] | undefined, fallback: string): string {
  * Convert hex color to HSL string (h s% l%)
  */
 function hexToHsl(hex: string): string {
-  // Remove # prefix
-  const clean = hex.replace('#', '');
+  // Normalize: strip #, handle 3-digit shorthand, validate
+  let clean = hex.replace('#', '');
+  if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+    clean = clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2];
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '0 0% 50%'; // fallback gray
+
   const r = parseInt(clean.substring(0, 2), 16) / 255;
   const g = parseInt(clean.substring(2, 4), 16) / 255;
   const b = parseInt(clean.substring(4, 6), 16) / 255;
