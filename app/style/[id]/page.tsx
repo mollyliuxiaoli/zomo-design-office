@@ -12,7 +12,7 @@ export default function StyleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [style, setStyle] = useState<LibraryRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'markdown' | 'css' | 'prompt'>('markdown');
+  const [activeTab, setActiveTab] = useState<'markdown' | 'css' | 'prompt' | 'tailwind' | 'shadcn'>('markdown');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
@@ -154,6 +154,32 @@ export default function StyleDetailPage() {
                 ))}
                 <span className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded">
                   {style.source.type}
+                </span>
+              </div>
+
+              {/* Confidence visualization */}
+              <div className="mt-4 flex items-center gap-3">
+                <span className="text-xs text-gray-500">分析置信度</span>
+                <div className="flex-1 max-w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      (spec.meta.confidence || 0) >= 80
+                        ? 'bg-green-500'
+                        : (spec.meta.confidence || 0) >= 50
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
+                    }`}
+                    style={{ width: `${spec.meta.confidence || 0}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-semibold ${
+                  (spec.meta.confidence || 0) >= 80
+                    ? 'text-green-600'
+                    : (spec.meta.confidence || 0) >= 50
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+                }`}>
+                  {spec.meta.confidence || 0}%
                 </span>
               </div>
             </div>
@@ -337,6 +363,26 @@ export default function StyleDetailPage() {
               >
                 AI Prompt
               </button>
+              <button
+                onClick={() => setActiveTab('tailwind')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'tailwind'
+                    ? 'bg-black text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tailwind
+              </button>
+              <button
+                onClick={() => setActiveTab('shadcn')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'shadcn'
+                    ? 'bg-black text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                shadcn/ui
+              </button>
             </div>
 
             {/* Content Display */}
@@ -345,18 +391,26 @@ export default function StyleDetailPage() {
                 {activeTab === 'markdown' && markdownContent}
                 {activeTab === 'css' && cssContent}
                 {activeTab === 'prompt' && promptContent}
+                {activeTab === 'tailwind' && (spec.derived?.tailwindConfig || spec.derived?.tailwindExample || '')}
+                {activeTab === 'shadcn' && (spec.derived?.shadcnTheme || spec.derived?.shadcnConfig || '')}
               </pre>
             </div>
 
             {/* Copy Button */}
             <button
               onClick={() => {
+                const tailwindContent = [spec.derived?.tailwindConfig, '', '// --- Usage Example ---', '', spec.derived?.tailwindExample].filter(Boolean).join('\n');
+                const shadcnContent = [spec.derived?.shadcnTheme, '', '// --- components.json ---', '', spec.derived?.shadcnConfig].filter(Boolean).join('\n');
                 const content =
                   activeTab === 'markdown'
                     ? markdownContent
                     : activeTab === 'css'
                     ? cssContent
-                    : promptContent;
+                    : activeTab === 'prompt'
+                    ? promptContent
+                    : activeTab === 'tailwind'
+                    ? tailwindContent
+                    : shadcnContent;
                 handleCopy(content);
               }}
               className={`w-full py-3 rounded-lg font-semibold transition-colors ${
@@ -365,7 +419,7 @@ export default function StyleDetailPage() {
                   : 'bg-black text-white hover:bg-gray-800'
               }`}
             >
-              {copied ? '已复制！' : `复制${activeTab === 'prompt' ? 'Prompt' : activeTab.toUpperCase()}`}
+              {copied ? '已复制！' : `复制${activeTab === 'prompt' ? 'Prompt' : activeTab === 'shadcn' ? 'shadcn/ui' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
             </button>
               </>
             )}

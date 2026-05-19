@@ -73,6 +73,10 @@ export type StyleSpecV1 = {
     cssVariables?: string;
     markdown?: string;
     restorationPrompt?: string;
+    tailwindConfig?: string;
+    tailwindExample?: string;
+    shadcnTheme?: string;
+    shadcnConfig?: string;
   };
   meta: {
     confidence: number;

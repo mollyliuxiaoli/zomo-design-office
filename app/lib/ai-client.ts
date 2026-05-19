@@ -6,6 +6,8 @@
 import { renderCssVariables } from '@/app/lib/renderers/css-variables';
 import { renderMarkdown } from '@/app/lib/renderers/markdown-doc';
 import { renderRestorationPrompt } from '@/app/lib/renderers/restoration-prompt';
+import { renderTailwindConfig, renderTailwindExample } from '@/app/lib/renderers/tailwind';
+import { renderShadcnTheme, renderShadcnConfig } from '@/app/lib/renderers/shadcn';
 import type { StyleSpecV1 } from '@/app/lib/spec/types';
 
 const API_BASE_URL = 'https://api.apimart.ai/v1';
@@ -114,6 +116,10 @@ export function withDerived(spec: StyleSpecV1): StyleSpecV1 {
       cssVariables: renderCssVariables(specWithoutDerived),
       markdown: renderMarkdown(specWithoutDerived),
       restorationPrompt: renderRestorationPrompt(specWithoutDerived),
+      tailwindConfig: renderTailwindConfig(specWithoutDerived),
+      tailwindExample: renderTailwindExample(specWithoutDerived),
+      shadcnTheme: renderShadcnTheme(specWithoutDerived),
+      shadcnConfig: renderShadcnConfig(specWithoutDerived),
     },
   };
 }
