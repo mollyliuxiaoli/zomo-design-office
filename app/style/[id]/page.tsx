@@ -254,14 +254,14 @@ export default function StyleDetailPage() {
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">主色</h3>
                 <div className="flex gap-2">
-                  {spec.colors.primary.map((color, index) => (
+                  {(spec.colors?.primary || []).map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
-                      style={{ backgroundColor: color }}
+                      style={{ backgroundColor: String(color) }}
                     >
                       <span className="absolute inset-0 flex items-center justify-center text-xs font-mono opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 text-white transition-opacity">
-                        {color}
+                        {String(color)}
                       </span>
                     </div>
                   ))}
@@ -271,14 +271,14 @@ export default function StyleDetailPage() {
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">辅色</h3>
                 <div className="flex gap-2">
-                  {spec.colors.secondary.map((color, index) => (
+                  {(spec.colors?.secondary || []).map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
-                      style={{ backgroundColor: color }}
+                      style={{ backgroundColor: String(color) }}
                     >
                       <span className="absolute inset-0 flex items-center justify-center text-xs font-mono opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 text-white transition-opacity">
-                        {color}
+                        {String(color)}
                       </span>
                     </div>
                   ))}
@@ -288,14 +288,14 @@ export default function StyleDetailPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">背景色</h3>
                 <div className="flex gap-2">
-                  {spec.colors.background.map((color, index) => (
+                  {(spec.colors?.background || []).map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
-                      style={{ backgroundColor: color }}
+                      style={{ backgroundColor: String(color) }}
                     >
                       <span className="absolute inset-0 flex items-center justify-center text-xs font-mono opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 text-white transition-opacity">
-                        {color}
+                        {String(color)}
                       </span>
                     </div>
                   ))}
@@ -309,15 +309,15 @@ export default function StyleDetailPage() {
               <div className="space-y-3">
                 <div>
                   <span className="text-sm text-gray-600">标题字体：</span>
-                  <span className="text-sm font-medium">{spec.typography.suggestedFonts[0] || 'Inter'} / {spec.typography.headingWeight}</span>
+                  <span className="text-sm font-medium">{String(spec.typography?.suggestedFonts?.[0] || 'Inter')} / {String(spec.typography?.headingWeight || '700')}</span>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">正文字体：</span>
-                  <span className="text-sm font-medium">{spec.typography.suggestedFonts[1] || spec.typography.suggestedFonts[0] || 'Inter'} / {spec.typography.bodyWeight}</span>
+                  <span className="text-sm font-medium">{String(spec.typography?.suggestedFonts?.[1] || spec.typography?.suggestedFonts?.[0] || 'Inter')} / {String(spec.typography?.bodyWeight || '400')}</span>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">描述：</span>
-                  <span className="text-sm font-medium">{spec.typography.fontStyle} / {spec.typography.scale} / {spec.typography.lineHeight}</span>
+                  <span className="text-sm font-medium">{String(spec.typography?.fontStyle || 'sans')} / {String(spec.typography?.scale || 'balanced')} / {String(spec.typography?.lineHeight || 'normal')}</span>
                 </div>
               </div>
             </div>
@@ -326,12 +326,12 @@ export default function StyleDetailPage() {
             <div>
               <h2 className="text-xl font-semibold text-black mb-4">视觉风格</h2>
               <div className="flex flex-wrap gap-2">
-                {spec.vibe.keywords.map(tag => (
+                {(Array.isArray(spec.vibe?.keywords) ? spec.vibe.keywords : []).map(tag => (
                   <span
-                    key={tag}
+                    key={String(tag)}
                     className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded"
                   >
-                    {tag}
+                    {String(tag)}
                   </span>
                 ))}
               </div>
