@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react';
 import type { StyleSpecV1 } from '@/app/lib/spec/types';
-import { withDerived } from '@/app/lib/ai-client';
 
 interface SpecEditorProps {
   spec: StyleSpecV1;
@@ -15,8 +14,7 @@ export default function SpecEditor({ spec, onChange }: SpecEditorProps) {
   const [activeTab, setActiveTab] = useState<EditTab>('colors');
 
   const updateSpec = useCallback((partial: Partial<StyleSpecV1>) => {
-    const raw = { ...spec, ...partial };
-    const updated = withDerived(raw);
+    const updated = { ...spec, ...partial };
     onChange(updated);
   }, [spec, onChange]);
 

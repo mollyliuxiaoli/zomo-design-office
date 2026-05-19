@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import { styleRepo } from '../../lib/storage/repo';
@@ -16,6 +16,9 @@ export default function StyleDetailPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [draftSpec, setDraftSpec] = useState<StyleSpecV1 | null>(null);
 
   useEffect(() => {
     const loadStyle = async () => {
@@ -76,15 +79,32 @@ export default function StyleDetailPage() {
   const cssContent = spec.derived?.cssVariables || '';
   const promptContent = spec.derived?.restorationPrompt || '';
 
-  const handleSpecChange = async (updatedSpec: StyleSpecV1) => {
-    if (!style) return;
-    try {
-      const updatedRecord = await styleRepo.update(style.id, { spec: updatedSpec });
-      if (updatedRecord) setStyle(updatedRecord);
-    } catch (err) {
-      console.error('[distill] Failed to save spec edit:', err);
-    }
-  };
+  // The effective spec shown in editor (draft takes priority)
+  const editorSpec = draftSpec || spec;
+
+  const handleSpecChange = useCallback((updatedSpec: StyleSpecV1) => {
+    // Immediate local update
+    setDraftSpec(updatedSpec);
+
+    // Debounced persistence (500ms)
+    if (saveTimer) clearTimeout(saveTimer);
+    setSaveStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        const updatedRecord = await styleRepo.update(style!.id, { spec: updatedSpec });
+        if (updatedRecord) {
+          setStyle(updatedRecord);
+          setDraftSpec(null);
+        }
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (err) {
+        console.error('[distill] Failed to save spec edit:', err);
+        setSaveStatus('error');
+      }
+    }, 500);
+    setSaveTimer(timer);
+  }, [style, saveTimer]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -251,9 +271,18 @@ export default function StyleDetailPage() {
               </button>
             </div>
 
+            {/* Save status indicator */}
+            {showEditor && (
+              <div className="mb-2 flex items-center gap-2 text-xs" role="status">
+                {saveStatus === 'saving' && <span className="text-gray-500">⏳ 保存中...</span>}
+                {saveStatus === 'saved' && <span className="text-green-600">✓ 已保存</span>}
+                {saveStatus === 'error' && <span className="text-red-600" role="alert">⚠ 保存失败</span>}
+              </div>
+            )}
+
             {/* SpecEditor */}
             {showEditor ? (
-              <SpecEditor spec={spec} onChange={handleSpecChange} />
+              <SpecEditor spec={editorSpec} onChange={handleSpecChange} />
             ) : (
               <>
                 {/* Tab Buttons */}
