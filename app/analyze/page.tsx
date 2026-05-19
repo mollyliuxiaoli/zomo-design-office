@@ -9,6 +9,28 @@ import { normalizeSpec, withDerived, type StyleSpecV1Input } from '../lib/ai-cli
 
 type AnalyzeMode = 'image' | 'url' | 'screenshot';
 
+/** Compress image to fit within maxWidth while maintaining aspect ratio */
+async function compressImage(dataUrl: string, maxWidth: number, quality: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width <= maxWidth) {
+        resolve(dataUrl);
+        return;
+      }
+      const scale = maxWidth / img.width;
+      const canvas = document.createElement('canvas');
+      canvas.width = maxWidth;
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback to original
+    img.src = dataUrl;
+  });
+}
+
 export default function AnalyzePage() {
   const router = useRouter();
   const [mode, setMode] = useState<AnalyzeMode>('image');
@@ -76,6 +98,12 @@ export default function AnalyzePage() {
         } catch {
           throw new Error('无法下载图片，请直接上传文件');
         }
+      }
+
+      // Compress image if too large (>800px width) to fit within API timeout
+      if (imagePayload?.startsWith('data:image/')) {
+        setProgress('[1/3] 压缩图片...');
+        imagePayload = await compressImage(imagePayload, 800, 0.8);
       }
 
       if (mode === 'url') {
