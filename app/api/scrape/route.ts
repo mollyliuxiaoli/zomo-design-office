@@ -12,11 +12,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { url } = body;
 
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    if (!url || typeof url !== 'string') {
+      return NextResponse.json({ error: 'URL is required and must be a string' }, { status: 400 });
     }
 
-    const data = await scrapeUrl(url);
+    // Validate URL format
+    let validUrl: URL;
+    try {
+      validUrl = new URL(url);
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    }
+    if (!['http:', 'https:'].includes(validUrl.protocol)) {
+      return NextResponse.json({ error: 'Only HTTP and HTTPS URLs are supported' }, { status: 400 });
+    }
+
+    const data = await scrapeUrl(validUrl.href);
 
     return NextResponse.json(data);
   } catch (error) {

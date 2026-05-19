@@ -37,6 +37,14 @@ function recordsFromJson(input: string | ImportPayload): LibraryRecord[] {
   return parsed.records || parsed.styles || [];
 }
 
+function isValidRecord(r: unknown): r is LibraryRecord {
+  return (
+    typeof r === 'object' && r !== null &&
+    typeof (r as Record<string, unknown>).id === 'string' &&
+    typeof (r as Record<string, unknown>).spec === 'object'
+  );
+}
+
 export const styleRepo = {
   async save(record: LibraryRecord): Promise<LibraryRecord> {
     const prepared = prepareRecord(record);
@@ -79,14 +87,17 @@ export const styleRepo = {
   },
 
   async importFromJson(input: string | ImportPayload): Promise<number> {
-    const records = recordsFromJson(input);
-    let imported = 0;
+    const rawRecords = recordsFromJson(input);
+    // Validate all records first
+    const validRecords = rawRecords.filter(isValidRecord);
+    if (validRecords.length === 0) return 0;
 
-    for (const record of records) {
-      await styleRepo.save(record);
-      imported += 1;
-    }
-
-    return imported;
+    // Bulk put in a transaction
+    const db = getDb();
+    const prepared = validRecords.map(r => prepareRecord(r));
+    await db.transaction('rw', db.styles, async () => {
+      await db.styles.bulkPut(prepared);
+    });
+    return prepared.length;
   },
 };

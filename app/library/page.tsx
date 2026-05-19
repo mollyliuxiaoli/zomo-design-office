@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
@@ -44,15 +44,15 @@ export default function LibraryPage() {
     }
   };
 
-  const getAllTags = () => {
+  const allTags = useMemo(() => {
     const tags = new Set<string>();
     styles.forEach(style => {
       style.spec.vibe.keywords.forEach(tag => tags.add(tag));
     });
     return Array.from(tags);
-  };
+  }, [styles]);
 
-  const filteredStyles = styles.filter(style => {
+  const filteredStyles = useMemo(() => styles.filter(style => {
     const matchesSearch = searchTerm === '' ||
       style.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       style.spec.vibe.keywords.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -60,7 +60,7 @@ export default function LibraryPage() {
     const matchesTag = filterTag === 'all' || style.spec.vibe.keywords.includes(filterTag);
 
     return matchesSearch && matchesTag;
-  });
+  }), [styles, searchTerm, filterTag]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -107,7 +107,7 @@ export default function LibraryPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
             >
               <option value="all">全部标签</option>
-              {getAllTags().map(tag => (
+              {allTags.map(tag => (
                 <option key={tag} value={tag}>{tag}</option>
               ))}
             </select>
@@ -135,7 +135,7 @@ export default function LibraryPage() {
             <div className="text-sm text-gray-600">总风格数</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-black">{getAllTags().length}</div>
+            <div className="text-2xl font-bold text-black">{allTags.length}</div>
             <div className="text-sm text-gray-600">风格标签</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">

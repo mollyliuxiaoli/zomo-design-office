@@ -57,32 +57,41 @@ export default function SpecEditor({ spec, onChange }: SpecEditorProps) {
 }
 
 /** Color array editor */
+type ColorArrayKey = 'primary' | 'secondary' | 'background' | 'foreground' | 'accent';
+
+const COLOR_KEYS: ColorArrayKey[] = ['primary', 'secondary', 'background', 'foreground', 'accent'];
+
 function ColorsEditor({ spec, onUpdate }: { spec: StyleSpecV1; onUpdate: (p: Partial<StyleSpecV1>) => void }) {
-  const colorGroups = [
-    { key: 'primary' as const, label: '主色' },
-    { key: 'secondary' as const, label: '辅色' },
-    { key: 'background' as const, label: '背景色' },
-    { key: 'foreground' as const, label: '前景色' },
-    { key: 'accent' as const, label: '强调色' },
+  const colorGroups: Array<{ key: ColorArrayKey; label: string }> = [
+    { key: 'primary', label: '主色' },
+    { key: 'secondary', label: '辅色' },
+    { key: 'background', label: '背景色' },
+    { key: 'foreground', label: '前景色' },
+    { key: 'accent', label: '强调色' },
   ];
 
-  const updateColorArray = (key: keyof typeof spec.colors, index: number, value: string) => {
-    const arr = [...(spec.colors[key] as string[])];
+  function getColorArray(key: ColorArrayKey): string[] {
+    const val = spec.colors[key];
+    return Array.isArray(val) ? val : [];
+  }
+
+  const updateColorArray = (key: ColorArrayKey, index: number, value: string) => {
+    const arr = [...getColorArray(key)];
     arr[index] = value;
     onUpdate({
       colors: { ...spec.colors, [key]: arr },
     });
   };
 
-  const addColor = (key: keyof typeof spec.colors) => {
-    const arr = [...(spec.colors[key] as string[]), '#000000'];
+  const addColor = (key: ColorArrayKey) => {
+    const arr = [...getColorArray(key), '#000000'];
     onUpdate({
       colors: { ...spec.colors, [key]: arr },
     });
   };
 
-  const removeColor = (key: keyof typeof spec.colors, index: number) => {
-    const arr = (spec.colors[key] as string[]).filter((_, i) => i !== index);
+  const removeColor = (key: ColorArrayKey, index: number) => {
+    const arr = getColorArray(key).filter((_, i) => i !== index);
     onUpdate({
       colors: { ...spec.colors, [key]: arr },
     });
@@ -102,7 +111,7 @@ function ColorsEditor({ spec, onUpdate }: { spec: StyleSpecV1; onUpdate: (p: Par
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {(spec.colors[key] as string[])?.map((color, i) => (
+            {(getColorArray(key))?.map((color, i) => (
               <div key={i} className="flex items-center gap-1">
                 <input
                   type="color"

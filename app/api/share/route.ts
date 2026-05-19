@@ -53,20 +53,40 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing data parameter' }, { status: 400 });
   }
 
+  // Reject oversized tokens before decompression
+  if (token.length > 8000) {
+    return NextResponse.json({ error: 'Share link too large' }, { status: 400 });
+  }
+
   try {
     const decompressed = decompressFromEncodedURIComponent(token);
     if (!decompressed) {
       return NextResponse.json({ error: 'Invalid share data' }, { status: 400 });
     }
 
+    // Reject decompressed payloads over 50KB
+    if (decompressed.length > 50 * 1024) {
+      return NextResponse.json({ error: 'Share data too large' }, { status: 400 });
+    }
+
     const parsed = JSON.parse(decompressed);
+
+    // Validate shape: must have spec object
+    if (typeof parsed !== 'object' || parsed === null) {
+      return NextResponse.json({ error: 'Invalid share data format' }, { status: 400 });
+    }
+
     const rawSpec = parsed.spec || parsed;
+    if (typeof rawSpec !== 'object' || !rawSpec.styleName) {
+      return NextResponse.json({ error: 'Invalid style spec' }, { status: 400 });
+    }
+
     const fullSpec = withDerived(normalizeSpec(rawSpec as StyleSpecV1Input));
 
     return NextResponse.json({
       spec: fullSpec,
-      title: parsed.title || fullSpec.styleName,
-      thumbnailUrl: parsed.thumbnailUrl || '',
+      title: String(parsed.title || fullSpec.styleName),
+      thumbnailUrl: String(parsed.thumbnailUrl || ''),
     });
   } catch (error) {
     console.error('Error decompressing share data:', error);

@@ -1,19 +1,33 @@
 import { ImageResponse } from '@vercel/og';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
+function isValidHex(color: string): boolean {
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color);
+}
+
+function safeColor(color: string, fallback: string): string {
+  return isValidHex(color) ? color : fallback;
+}
+
+function clampString(s: string, max: number): string {
+  if (s.length > max) return s.substring(0, max);
+  return s;
+}
+
 export async function GET(request: NextRequest) {
+  try {
   const { searchParams } = new URL(request.url);
 
-  const title = searchParams.get('title') || 'Untitled Style';
-  const keywords = searchParams.get('keywords') || '';
-  const primary = searchParams.get('primary') || '#2563eb';
-  const bg = searchParams.get('bg') || '#ffffff';
-  const fg = searchParams.get('fg') || '#0f172a';
+  const title = clampString(searchParams.get('title') || 'Untitled Style', 80);
+  const keywords = clampString(searchParams.get('keywords') || '', 200);
+  const primary = safeColor(searchParams.get('primary') || '#2563eb', '#2563eb');
+  const bg = safeColor(searchParams.get('bg') || '#ffffff', '#ffffff');
+  const fg = safeColor(searchParams.get('fg') || '#0f172a', '#0f172a');
   const confidence = searchParams.get('confidence') || '85';
   const font = searchParams.get('font') || 'sans';
-  const vibe = searchParams.get('vibe') || '';
+  const vibe = clampString(searchParams.get('vibe') || '', 120);
 
   const keywordList = keywords.split(',').filter(Boolean).slice(0, 5);
   const confNum = Math.max(0, Math.min(100, parseInt(confidence, 10) || 0));
@@ -22,9 +36,9 @@ export async function GET(request: NextRequest) {
   // Use pixel values for OG compatibility
   const confWidth = Math.round((48 * confNum) / 100);
 
-  const palette = searchParams.get('palette')?.split(',').filter(Boolean).slice(0, 6) || [];
+  const palette = searchParams.get('palette')?.split(',').filter(isValidHex).slice(0, 6) || [];
 
-  return new ImageResponse(
+    return new ImageResponse(
     (
       <div
         style={{
@@ -110,4 +124,8 @@ export async function GET(request: NextRequest) {
       },
     },
   );
+  } catch (error) {
+    console.error('OG generation error:', error);
+    return NextResponse.json({ error: 'Failed to generate OG image' }, { status: 500 });
+  }
 }

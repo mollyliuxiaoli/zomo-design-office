@@ -22,7 +22,8 @@ async function compressImage(dataUrl: string, maxWidth: number, quality: number)
       const canvas = document.createElement('canvas');
       canvas.width = maxWidth;
       canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d')!;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(dataUrl); return; }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
@@ -157,7 +158,7 @@ export default function AnalyzePage() {
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreview(reader.result as string);
+        setPreview(typeof reader.result === 'string' ? reader.result : '');
       };
       reader.readAsDataURL(selectedFile);
     }
@@ -196,7 +197,10 @@ export default function AnalyzePage() {
           const blob = await imgRes.blob();
           imagePayload = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') resolve(reader.result);
+              else reject(new Error('FileReader did not return string'));
+            };
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
@@ -243,7 +247,8 @@ export default function AnalyzePage() {
         const { key } = await tokenRes.json();
 
         // Call AI directly
-        const rawSpec = await callVisionAPI(imagePayload!, key);
+        if (!imagePayload) throw new Error('Image processing failed');
+        const rawSpec = await callVisionAPI(imagePayload, key);
 
         // Ensure rawSpec is a plain object
         if (typeof rawSpec !== 'object' || rawSpec === null || Array.isArray(rawSpec)) {

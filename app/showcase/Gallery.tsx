@@ -20,7 +20,8 @@ export default function ShowcasePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/showcase')
+    const controller = new AbortController();
+    fetch('/api/showcase', { signal: controller.signal })
       .then(r => {
         if (!r.ok) throw new Error('Failed to load');
         return r.json();
@@ -30,9 +31,11 @@ export default function ShowcasePage() {
         setLoading(false);
       })
       .catch(err => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'Failed to load showcase');
         setLoading(false);
       });
+    return () => controller.abort();
   }, []);
 
   return (

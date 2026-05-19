@@ -46,10 +46,44 @@ export default function StyleDetailPage() {
     void loadStyle();
   }, [params.id, router]);
 
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Debounced spec save — hook must be before any early return
+  const handleSpecChange = useCallback((updatedSpec: StyleSpecV1) => {
+    setDraftSpec(updatedSpec);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSaveStatus('saving');
+    const currentId = style?.id;
+    if (!currentId) return;
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const updatedRecord = await styleRepo.update(currentId, { spec: updatedSpec });
+        if (updatedRecord) {
+          setStyle(updatedRecord);
+          setDraftSpec(null);
+        }
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (err) {
+        console.error('[distill] Failed to save spec edit:', err);
+        setSaveStatus('error');
+      }
+    }, 500);
+  }, [style?.id]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('[distill] Clipboard write failed:', err);
+    }
   };
 
   const handleDownload = (tab: typeof activeTab, content: string) => {
@@ -172,36 +206,6 @@ export default function StyleDetailPage() {
 
   // The effective spec shown in editor (draft takes priority)
   const editorSpec = draftSpec || spec;
-
-  const handleSpecChange = useCallback((updatedSpec: StyleSpecV1) => {
-    // Immediate local update
-    setDraftSpec(updatedSpec);
-
-    // Debounced persistence (500ms)
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    setSaveStatus('saving');
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        const updatedRecord = await styleRepo.update(style!.id, { spec: updatedSpec });
-        if (updatedRecord) {
-          setStyle(updatedRecord);
-          setDraftSpec(null);
-        }
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      } catch (err) {
-        console.error('[distill] Failed to save spec edit:', err);
-        setSaveStatus('error');
-      }
-    }, 500);
-  }, [style]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-white">

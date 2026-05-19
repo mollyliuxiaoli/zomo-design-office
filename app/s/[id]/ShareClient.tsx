@@ -55,10 +55,14 @@ export default function ShareClient() {
     loadData();
   }, [params.id]);
 
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('[distill] Clipboard write failed:', err);
+    }
   };
 
   const getTabContent = (tab: typeof activeTab): string => {

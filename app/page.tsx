@@ -134,19 +134,23 @@ export default function Home() {
                 key={demo.id}
                 className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer"
                 onClick={async () => {
-                  const fullSpec = withDerived(normalizeSpec(demo.spec));
-                  const record: LibraryRecord = {
-                    id: demo.id,
-                    spec: fullSpec,
-                    source: { type: 'demo', label: demo.source.label },
-                    title: demo.title,
-                    thumbnailUrl: '',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    visibility: 'private',
-                  };
-                  await styleRepo.save(record);
-                  window.location.href = `/style/${demo.id}`;
+                  try {
+                    const fullSpec = withDerived(normalizeSpec(demo.spec));
+                    const record: LibraryRecord = {
+                      id: demo.id,
+                      spec: fullSpec,
+                      source: { type: 'demo', label: demo.source.label },
+                      title: demo.title,
+                      thumbnailUrl: '',
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      visibility: 'private',
+                    };
+                    await styleRepo.save(record);
+                    window.location.href = `/style/${demo.id}`;
+                  } catch (err) {
+                    console.error('[distill] Failed to save demo style:', err);
+                  }
                 }}
               >
                 <div className="aspect-[16/10] flex items-center justify-center relative overflow-hidden" style={{ backgroundColor: bg }}>

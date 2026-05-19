@@ -20,8 +20,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required (image mode uses client-side AI)' }, { status: 400 });
     }
 
-    if (typeof url !== 'string' || !url.startsWith('http')) {
+    if (typeof url !== 'string') {
+      return NextResponse.json({ error: 'URL must be a string' }, { status: 400 });
+    }
+
+    // Validate URL format
+    let validUrl: URL;
+    try {
+      validUrl = new URL(url);
+    } catch {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    }
+    if (!['http:', 'https:'].includes(validUrl.protocol)) {
+      return NextResponse.json({ error: 'Only HTTP and HTTPS URLs are supported' }, { status: 400 });
     }
 
     const scrapedData = await scrapeUrl(url);

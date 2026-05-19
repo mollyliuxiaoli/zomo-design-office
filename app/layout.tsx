@@ -5,6 +5,7 @@ const brandName = process.env.NEXT_PUBLIC_BRAND_NAME || 'Distill';
 const brandDomain = process.env.NEXT_PUBLIC_BRAND_DOMAIN || 'distill.style';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(`https://${brandDomain}`),
   title: {
     default: `${brandName} — Visual Style Compiler`,
     template: `%s | ${brandName}`,
@@ -54,6 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" />
         <meta name="theme-color" content="#000000" />
       </head>
