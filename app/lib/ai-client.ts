@@ -106,7 +106,7 @@ function extractFontName(fontDesc: string): string {
   return match ? match[1].trim() : 'Inter';
 }
 
-function withDerived(spec: StyleSpecV1): StyleSpecV1 {
+export function withDerived(spec: StyleSpecV1): StyleSpecV1 {
   const specWithoutDerived = { ...spec, derived: undefined };
   return {
     ...spec,

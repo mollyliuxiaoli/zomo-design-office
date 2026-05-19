@@ -3,29 +3,33 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navigation from './components/Navigation';
-import { storageUtils } from './lib/storage';
-import { Style } from '@/types/style';
+import { styleRepo } from './lib/storage/repo';
+import type { LibraryRecord } from './lib/storage/db';
 
 const STYLE_TAGS = ['Minimalist', 'Brutalist', 'Editorial', 'Corporate', 'Playful', 'Luxury', 'Retro', 'Futuristic', 'Organic', 'Swiss'];
-const PROJECT_TYPES = ['Landing Page', 'Dashboard', 'App', 'Poster', 'Portfolio', 'E-Commerce'];
 
 export default function Home() {
-  const [styles, setStyles] = useState<Style[]>([]);
+  const [styles, setStyles] = useState<LibraryRecord[]>([]);
   const [selectedStyleTag, setSelectedStyleTag] = useState<string | null>(null);
-  const [selectedProjectType, setSelectedProjectType] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadStyles();
+    void loadStyles();
   }, []);
 
-  const loadStyles = () => {
-    const savedStyles = storageUtils.getStyles();
-    setStyles(savedStyles);
+  const loadStyles = async () => {
+    try {
+      const savedStyles = await styleRepo.listAll();
+      setStyles(savedStyles);
+      setError(null);
+    } catch (err) {
+      console.error('[distill] Failed to load styles:', err);
+      setError('加载风格库失败，请刷新页面重试');
+    }
   };
 
   const filteredStyles = styles.filter(style => {
-    if (selectedStyleTag && !style.styleTags.includes(selectedStyleTag)) return false;
-    if (selectedProjectType && style.projectType !== selectedProjectType) return false;
+    if (selectedStyleTag && !style.spec.vibe.keywords.includes(selectedStyleTag)) return false;
     return true;
   });
 
@@ -52,6 +56,13 @@ export default function Home() {
             提取新风格
           </Link>
         </div>
+
+        {/* Error banner */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {/* Filter Tags */}
         <div className="mb-8">
@@ -81,33 +92,6 @@ export default function Home() {
               </button>
             ))}
           </div>
-
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">项目类型</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedProjectType(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedProjectType === null
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              全部
-            </button>
-            {PROJECT_TYPES.map(type => (
-              <button
-                key={type}
-                onClick={() => setSelectedProjectType(type)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedProjectType === type
-                    ? 'bg-black text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Style Grid */}
@@ -120,15 +104,15 @@ export default function Home() {
             >
               <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
                 <img
-                  src={style.imageUrl}
-                  alt={style.name}
+                  src={style.thumbnailUrl}
+                  alt={style.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-lg mb-2">{style.name}</h3>
+                <h3 className="font-semibold text-lg mb-2">{style.title}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {style.styleTags.slice(0, 3).map(tag => (
+                  {style.spec.vibe.keywords.slice(0, 3).map(tag => (
                     <span
                       key={tag}
                       className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
@@ -136,9 +120,6 @@ export default function Home() {
                       {tag}
                     </span>
                   ))}
-                  <span className="px-2 py-1 bg-black text-white text-xs rounded">
-                    {style.projectType}
-                  </span>
                 </div>
               </div>
             </Link>

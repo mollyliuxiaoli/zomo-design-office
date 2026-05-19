@@ -3,47 +3,59 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
-import { storageUtils } from '../lib/storage';
-import { Style } from '@/types/style';
+import { styleRepo } from '../lib/storage/repo';
+import type { LibraryRecord } from '../lib/storage/db';
 
 export default function ManagePage() {
   const router = useRouter();
-  const [styles, setStyles] = useState<Style[]>([]);
+  const [styles, setStyles] = useState<LibraryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadStyles();
+    void loadStyles();
   }, []);
 
-  const loadStyles = () => {
-    const savedStyles = storageUtils.getStyles();
-    setStyles(savedStyles.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ));
+  const loadStyles = async () => {
+    try {
+      const savedStyles = await styleRepo.listAll();
+      setStyles(savedStyles.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ));
+      setError(null);
+    } catch (err) {
+      console.error('[distill] Failed to load styles:', err);
+      setError('加载风格库失败');
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('确定要删除这个风格吗？')) {
-      storageUtils.deleteStyle(id);
-      loadStyles();
+      try {
+        await styleRepo.delete(id);
+        await loadStyles();
+      } catch (err) {
+        console.error('[distill] Failed to delete style:', err);
+        alert('删除失败，请重试');
+      }
     }
   };
 
   const getAllTags = () => {
     const tags = new Set<string>();
     styles.forEach(style => {
-      style.styleTags.forEach(tag => tags.add(tag));
+      style.spec.vibe.keywords.forEach(tag => tags.add(tag));
     });
     return Array.from(tags);
   };
 
   const filteredStyles = styles.filter(style => {
     const matchesSearch = searchTerm === '' ||
-      style.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      style.description.toLowerCase().includes(searchTerm.toLowerCase());
+      style.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      style.spec.vibe.keywords.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesTag = filterTag === 'all' || style.styleTags.includes(filterTag);
+    const matchesTag = filterTag === 'all' || style.spec.vibe.keywords.includes(filterTag);
 
     return matchesSearch && matchesTag;
   });
@@ -87,6 +99,13 @@ export default function ManagePage() {
           </div>
         </div>
 
+        {/* Error banner */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* Style List */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {filteredStyles.length > 0 ? (
@@ -101,20 +120,20 @@ export default function ManagePage() {
                       <div className="flex items-center gap-4 mb-2">
                         <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           <img
-                            src={style.imageUrl}
-                            alt={style.name}
+                            src={style.thumbnailUrl}
+                            alt={style.title}
                             className="w-full h-full object-cover"
                           />
                         </div>
                         <div className="flex-1">
                           <h3 className="text-xl font-semibold text-black mb-1">
-                            {style.name}
+                            {style.title}
                           </h3>
                           <p className="text-sm text-gray-600 mb-2">
-                            {style.description}
+                            {style.spec.vibe.description}
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {style.styleTags.slice(0, 3).map(tag => (
+                            {style.spec.vibe.keywords.slice(0, 3).map(tag => (
                               <span
                                 key={tag}
                                 className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
@@ -123,7 +142,7 @@ export default function ManagePage() {
                               </span>
                             ))}
                             <span className="px-2 py-1 bg-black text-white text-xs rounded">
-                              {style.projectType}
+                              {style.source.type}
                             </span>
                           </div>
                         </div>
@@ -185,9 +204,9 @@ export default function ManagePage() {
           </div>
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="text-3xl font-bold text-black mb-1">
-              {new Set(styles.map(s => s.projectType)).size}
+              {new Set(styles.map(s => s.source.type)).size}
             </div>
-            <div className="text-sm text-gray-600">项目类型</div>
+            <div className="text-sm text-gray-600">来源类型</div>
           </div>
         </div>
       </div>

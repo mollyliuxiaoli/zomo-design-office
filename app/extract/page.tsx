@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
-import { storageUtils } from '../lib/storage';
+import { styleRepo } from '../lib/storage/repo';
+import type { LibraryRecord } from '../lib/storage/db';
+import { normalizeSpec, withDerived, type StyleSpecV1Input } from '../lib/ai-client';
 
 export default function ExtractPage() {
   const router = useRouter();
@@ -63,18 +65,34 @@ export default function ExtractPage() {
 
       const analyzedStyle = await response.json();
 
-      // 生成ID和添加创建时间
-      const styleWithId = {
-        ...analyzedStyle,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
+      // Extract and normalize the spec from the API response
+      const rawSpec = (analyzedStyle.spec || analyzedStyle) as StyleSpecV1Input;
+      const fullSpec = withDerived(normalizeSpec(rawSpec));
+
+      const id = typeof analyzedStyle.id === 'string'
+        ? analyzedStyle.id
+        : fullSpec.styleId || Date.now().toString();
+      const createdAt = typeof analyzedStyle.createdAt === 'string'
+        ? analyzedStyle.createdAt
+        : new Date().toISOString();
+      const record: LibraryRecord = {
+        id,
+        spec: fullSpec,
+        source: {
+          type: 'user',
+          label: file?.name || imageUrl || undefined,
+        },
+        title: styleName || analyzedStyle.name || fullSpec.styleName || 'Unnamed Style',
+        thumbnailUrl: preview,
+        createdAt,
+        updatedAt: createdAt,
+        visibility: 'private',
       };
 
-      // 保存到localStorage
-      storageUtils.saveStyle(styleWithId);
+      const savedRecord = await styleRepo.save(record);
 
       // 跳转到详情页
-      router.push(`/style/${styleWithId.id}`);
+      router.push(`/style/${savedRecord.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '分析失败，请重试');
       console.error(err);

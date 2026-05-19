@@ -1,50 +1,33 @@
 import { Style } from '@/types/style';
 
-const STORAGE_KEY = 'zomo_styles';
+// DEPRECATED: use app/lib/storage/repo.ts instead.
+// This shim throws in development to prevent silent data loss from lingering imports.
+
+function deprecated(method: string): never {
+  throw new Error(
+    `storageUtils.${method}() is deprecated. Import { styleRepo } from '@/app/lib/storage/repo' instead.`
+  );
+}
 
 export const storageUtils = {
   getStyles: (): Style[] => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error reading from localStorage:', error);
-      return [];
-    }
+    if (process.env.NODE_ENV === 'development') deprecated('getStyles');
+    return [];
   },
 
   saveStyle: (style: Style): void => {
-    if (typeof window === 'undefined') return;
-    try {
-      const styles = storageUtils.getStyles();
-      const existingIndex = styles.findIndex(s => s.id === style.id);
-
-      if (existingIndex >= 0) {
-        styles[existingIndex] = style;
-      } else {
-        styles.push(style);
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(styles));
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
-    }
+    if (process.env.NODE_ENV === 'development') deprecated('saveStyle');
+    void style;
   },
 
   deleteStyle: (id: string): void => {
-    if (typeof window === 'undefined') return;
-    try {
-      const styles = storageUtils.getStyles();
-      const filtered = styles.filter(s => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    } catch (error) {
-      console.error('Error deleting from localStorage:', error);
-    }
+    if (process.env.NODE_ENV === 'development') deprecated('deleteStyle');
+    void id;
   },
 
   getStyleById: (id: string): Style | undefined => {
-    const styles = storageUtils.getStyles();
-    return styles.find(s => s.id === id);
+    if (process.env.NODE_ENV === 'development') deprecated('getStyleById');
+    void id;
+    return undefined;
   }
 };

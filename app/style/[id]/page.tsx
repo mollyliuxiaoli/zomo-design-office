@@ -3,23 +3,40 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
-import { storageUtils } from '../../lib/storage';
-import { Style } from '@/types/style';
+import { styleRepo } from '../../lib/storage/repo';
+import type { LibraryRecord } from '../../lib/storage/db';
 
 export default function StyleDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [style, setStyle] = useState<Style | null>(null);
+  const [style, setStyle] = useState<LibraryRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'markdown' | 'css' | 'prompt'>('markdown');
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const styleData = storageUtils.getStyleById(params.id as string);
-    if (styleData) {
-      setStyle(styleData);
-    } else {
-      router.push('/');
-    }
+    const loadStyle = async () => {
+      const rawId = params.id;
+      const id = Array.isArray(rawId) ? rawId[0] : rawId;
+      if (!id || typeof id !== 'string') {
+        router.push('/');
+        return;
+      }
+
+      try {
+        const styleData = await styleRepo.findById(id);
+        if (styleData) {
+          setStyle(styleData);
+        } else {
+          router.push('/');
+        }
+      } catch (err) {
+        console.error('[distill] Failed to load style:', err);
+        setError('加载风格详情失败');
+      }
+    };
+
+    void loadStyle();
   }, [params.id, router]);
 
   const handleCopy = (content: string) => {
@@ -28,10 +45,15 @@ export default function StyleDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (style && confirm('确定要删除这个风格吗？')) {
-      storageUtils.deleteStyle(style.id);
-      router.push('/manage');
+      try {
+        await styleRepo.delete(style.id);
+        router.push('/manage');
+      } catch (err) {
+        console.error('[distill] Failed to delete style:', err);
+        alert('删除失败，请重试');
+      }
     }
   };
 
@@ -45,6 +67,11 @@ export default function StyleDetailPage() {
       </div>
     );
   }
+
+  const spec = style.spec;
+  const markdownContent = spec.derived?.markdown || '';
+  const cssContent = spec.derived?.cssVariables || '';
+  const promptContent = spec.derived?.restorationPrompt || '';
 
   return (
     <div className="min-h-screen bg-white">
@@ -61,10 +88,10 @@ export default function StyleDetailPage() {
           </button>
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-4xl font-bold text-black mb-2">{style.name}</h1>
-              <p className="text-lg text-gray-600 mb-4">{style.description}</p>
+              <h1 className="text-4xl font-bold text-black mb-2">{style.title}</h1>
+              <p className="text-lg text-gray-600 mb-4">{spec.vibe.description}</p>
               <div className="flex flex-wrap gap-2">
-                {style.styleTags.map(tag => (
+                {spec.vibe.keywords.map(tag => (
                   <span
                     key={tag}
                     className="px-3 py-1 bg-black text-white text-sm rounded"
@@ -73,7 +100,7 @@ export default function StyleDetailPage() {
                   </span>
                 ))}
                 <span className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded">
-                  {style.projectType}
+                  {style.source.type}
                 </span>
               </div>
             </div>
@@ -94,8 +121,8 @@ export default function StyleDetailPage() {
               <h2 className="text-xl font-semibold text-black mb-4">原始图片</h2>
               <div className="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                 <img
-                  src={style.imageUrl}
-                  alt={style.name}
+                  src={style.thumbnailUrl}
+                  alt={style.title}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -108,7 +135,7 @@ export default function StyleDetailPage() {
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">主色</h3>
                 <div className="flex gap-2">
-                  {style.colors.primary.map((color, index) => (
+                  {spec.colors.primary.map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
@@ -125,7 +152,7 @@ export default function StyleDetailPage() {
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">辅色</h3>
                 <div className="flex gap-2">
-                  {style.colors.secondary.map((color, index) => (
+                  {spec.colors.secondary.map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
@@ -142,7 +169,7 @@ export default function StyleDetailPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">背景色</h3>
                 <div className="flex gap-2">
-                  {style.colors.background.map((color, index) => (
+                  {spec.colors.background.map((color, index) => (
                     <div
                       key={index}
                       className="flex-1 aspect-square rounded-lg border border-gray-200 relative group"
@@ -163,15 +190,15 @@ export default function StyleDetailPage() {
               <div className="space-y-3">
                 <div>
                   <span className="text-sm text-gray-600">标题字体：</span>
-                  <span className="text-sm font-medium">{style.typography.headings}</span>
+                  <span className="text-sm font-medium">{spec.typography.suggestedFonts[0] || 'Inter'} / {spec.typography.headingWeight}</span>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">正文字体：</span>
-                  <span className="text-sm font-medium">{style.typography.body}</span>
+                  <span className="text-sm font-medium">{spec.typography.suggestedFonts[1] || spec.typography.suggestedFonts[0] || 'Inter'} / {spec.typography.bodyWeight}</span>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">描述：</span>
-                  <span className="text-sm font-medium">{style.typography.description}</span>
+                  <span className="text-sm font-medium">{spec.typography.fontStyle} / {spec.typography.scale} / {spec.typography.lineHeight}</span>
                 </div>
               </div>
             </div>
@@ -180,7 +207,7 @@ export default function StyleDetailPage() {
             <div>
               <h2 className="text-xl font-semibold text-black mb-4">视觉风格</h2>
               <div className="flex flex-wrap gap-2">
-                {style.visualStyle.map(tag => (
+                {spec.vibe.keywords.map(tag => (
                   <span
                     key={tag}
                     className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded"
@@ -233,9 +260,9 @@ export default function StyleDetailPage() {
             {/* Content Display */}
             <div className="bg-gray-50 rounded-lg p-6 mb-4">
               <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono overflow-x-auto">
-                {activeTab === 'markdown' && style.markdownContent}
-                {activeTab === 'css' && style.cssContent}
-                {activeTab === 'prompt' && style.promptContent}
+                {activeTab === 'markdown' && markdownContent}
+                {activeTab === 'css' && cssContent}
+                {activeTab === 'prompt' && promptContent}
               </pre>
             </div>
 
@@ -244,10 +271,10 @@ export default function StyleDetailPage() {
               onClick={() => {
                 const content =
                   activeTab === 'markdown'
-                    ? style.markdownContent
+                    ? markdownContent
                     : activeTab === 'css'
-                    ? style.cssContent
-                    : style.promptContent;
+                    ? cssContent
+                    : promptContent;
                 handleCopy(content);
               }}
               className={`w-full py-3 rounded-lg font-semibold transition-colors ${
