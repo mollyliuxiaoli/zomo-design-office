@@ -3,7 +3,8 @@ import AIClient, { assembleSpec } from '@/app/lib/ai-client';
 import { scrapeUrl } from '@/app/lib/scraper';
 import type { StyleSpecV1 } from '@/app/lib/spec/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /**
  * API Route: Reverse Engineer Page

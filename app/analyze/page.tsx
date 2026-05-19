@@ -97,6 +97,7 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(90000), // 90s timeout for large images
       });
 
       if (!response.ok) {

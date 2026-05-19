@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import AIClient from '@/app/lib/ai-client';
 import type { StyleSpecV1 } from '@/app/lib/spec/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /**
  * API Route: Analyze Style
