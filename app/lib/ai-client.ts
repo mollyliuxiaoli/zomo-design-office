@@ -15,6 +15,7 @@ const API_KEY = process.env.APIMART_API_KEY;
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const PROMPT_VERSION = 'style-spec-v1.0';
 const RENDERER_VERSION = '1.0';
+let idCounter = 0;
 
 type SourceType = StyleSpecV1['source']['type'];
 type DeepPartial<T> = {
@@ -98,7 +99,7 @@ function legacyTypography(partial: Record<string, unknown>): Record<string, unkn
     ...typography,
     suggestedFonts: [
       extractFontName(stringValue(typography.headings, 'Inter')),
-      extractFontName(stringValue(typography.body, 'Inter')),
+      extractFontName(stringValue(typography.body, 'Arial')),
     ],
   };
 }
@@ -142,7 +143,7 @@ export function normalizeSpec(partialSpec: StyleSpecV1Input): StyleSpecV1 {
 
   return {
     specVersion: '1.0',
-    styleId: stringValue(partial.styleId, Date.now().toString()),
+    styleId: stringValue(partial.styleId, `${Date.now()}-${++idCounter}`),
     styleName: stringValue(partial.styleName, 'Unnamed Style'),
     source: {
       type: enumValue(source.type, ['image', 'url', 'screenshot'] as const, 'image'),
@@ -236,7 +237,7 @@ export function assembleSpec(partialSpec: StyleSpecV1Input, options: AssembleSpe
 
   return withDerived(normalizeSpec({
     ...partialSpec,
-    styleId: partialSpec.styleId || Date.now().toString(),
+    styleId: partialSpec.styleId || `${Date.now()}-${++idCounter}`,
     styleName: options.styleName || partialSpec.styleName || 'Unnamed Style',
     source,
     meta,
