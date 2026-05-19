@@ -174,15 +174,15 @@ export default function StyleDetailPage() {
           </button>
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-4xl font-bold text-black mb-2">{style.title}</h1>
-              <p className="text-lg text-gray-600 mb-4">{spec.vibe.description}</p>
+              <h1 className="text-4xl font-bold text-black mb-2">{String(style.title || 'Untitled')}</h1>
+              <p className="text-lg text-gray-600 mb-4">{String(spec.vibe?.description || '')}</p>
               <div className="flex flex-wrap gap-2">
-                {spec.vibe.keywords.map(tag => (
+                {(Array.isArray(spec.vibe?.keywords) ? spec.vibe.keywords : []).map(tag => (
                   <span
-                    key={tag}
+                    key={String(tag)}
                     className="px-3 py-1 bg-black text-white text-sm rounded"
                   >
-                    {tag}
+                    {String(tag)}
                   </span>
                 ))}
                 <span className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded">

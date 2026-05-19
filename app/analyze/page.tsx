@@ -245,6 +245,11 @@ export default function AnalyzePage() {
         // Call AI directly
         const rawSpec = await callVisionAPI(imagePayload!, key);
 
+        // Ensure rawSpec is a plain object
+        if (typeof rawSpec !== 'object' || rawSpec === null || Array.isArray(rawSpec)) {
+          throw new Error('AI 返回了无效数据格式');
+        }
+
         const fullSpec = withDerived(normalizeSpec(rawSpec as StyleSpecV1Input));
         const id = fullSpec.styleId || Date.now().toString();
         const createdAt = new Date().toISOString();
