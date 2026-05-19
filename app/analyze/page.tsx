@@ -31,6 +31,45 @@ async function compressImage(dataUrl: string, maxWidth: number, quality: number)
   });
 }
 
+/** Read SSE stream and return the final record */
+async function readSSEResponse(response: Response): Promise<LibraryRecord> {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data: ')) continue;
+      const data = trimmed.slice(6);
+
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.type === 'complete' && parsed.record) {
+          return parsed.record as LibraryRecord;
+        }
+        if (parsed.type === 'error') {
+          throw new Error(parsed.error || '分析失败');
+        }
+      } catch (err) {
+        // Re-throw explicit errors
+        if (err instanceof Error && err.message !== '分析失败' && !data.startsWith('{')) continue;
+        if (err instanceof Error && err.message === '分析失败') throw err;
+        if (err instanceof Error) throw err;
+      }
+    }
+  }
+
+  throw new Error('连接中断，请重试');
+}
+
 export default function AnalyzePage() {
   const router = useRouter();
   const [mode, setMode] = useState<AnalyzeMode>('image');
@@ -125,7 +164,6 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(90000), // 90s timeout for large images
       });
 
       if (!response.ok) {
@@ -133,35 +171,43 @@ export default function AnalyzePage() {
         throw new Error(errorData.error || '分析失败');
       }
 
-      setProgress('[3/3] 处理结果...');
-      const analyzedStyle = await response.json();
+      // Check if response is SSE stream (for image/screenshot modes) or JSON (for URL mode)
+      const contentType = response.headers.get('content-type') || '';
+      let savedRecord: LibraryRecord;
 
-      // Extract and normalize the spec
-      const rawSpec = (analyzedStyle.spec || analyzedStyle) as StyleSpecV1Input;
-      const fullSpec = withDerived(normalizeSpec(rawSpec));
+      if (contentType.includes('text/event-stream')) {
+        // Read SSE stream
+        setProgress('[2/3] AI 正在分析，请稍候...');
+        const streamRecord = await readSSEResponse(response);
+        savedRecord = await styleRepo.save(streamRecord);
+      } else {
+        // Direct JSON response (URL mode)
+        setProgress('[3/3] 处理结果...');
+        const analyzedStyle = await response.json();
 
-      const id = typeof analyzedStyle.id === 'string'
-        ? analyzedStyle.id
-        : fullSpec.styleId || Date.now().toString();
-      const createdAt = typeof analyzedStyle.createdAt === 'string'
-        ? analyzedStyle.createdAt
-        : new Date().toISOString();
+        // URL mode returns { record, spec }
+        if (analyzedStyle.record) {
+          savedRecord = await styleRepo.save(analyzedStyle.record);
+        } else {
+          // Fallback for old-style responses
+          const rawSpec = (analyzedStyle.spec || analyzedStyle) as StyleSpecV1Input;
+          const fullSpec = withDerived(normalizeSpec(rawSpec));
+          const id = fullSpec.styleId || Date.now().toString();
+          const createdAt = new Date().toISOString();
+          const record: LibraryRecord = {
+            id,
+            spec: fullSpec,
+            source: { type: 'user', label: file?.name || imageUrl || targetUrl || undefined },
+            title: styleName || fullSpec.styleName || 'Analyzed Style',
+            thumbnailUrl: preview || '',
+            createdAt,
+            updatedAt: createdAt,
+            visibility: 'private',
+          };
+          savedRecord = await styleRepo.save(record);
+        }
+      }
 
-      const record: LibraryRecord = {
-        id,
-        spec: fullSpec,
-        source: {
-          type: 'user',
-          label: file?.name || imageUrl || targetUrl || undefined,
-        },
-        title: styleName || analyzedStyle.name || fullSpec.styleName || 'Unnamed Style',
-        thumbnailUrl: preview || '',
-        createdAt,
-        updatedAt: createdAt,
-        visibility: 'private',
-      };
-
-      const savedRecord = await styleRepo.save(record);
       router.push(`/style/${savedRecord.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '分析失败，请重试');
