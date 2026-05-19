@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${brandName} — Visual Style Compiler`,
     description: 'Extract design DNA from any website or image.',
+    images: [`https://${brandDomain}/api/og?title=${encodeURIComponent(brandName)}&primary=%232563eb&bg=%23ffffff&confidence=95&vibe=Visual+style+compiler`],
   },
   robots: {
     index: true,
