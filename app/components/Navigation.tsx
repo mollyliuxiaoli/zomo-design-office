@@ -9,6 +9,7 @@ export default function Navigation() {
   const navItems = [
     { href: '/library', label: 'Library' },
     { href: '/analyze', label: 'Analyze' },
+    { href: '/showcase', label: 'Showcase' },
     { href: '/compare', label: 'Compare' },
   ];
 

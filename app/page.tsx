@@ -84,14 +84,22 @@ export default function Home() {
             Decode design, distill style.
           </p>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
-            收集、提取、复用、上传任意网站截图或图片，一键提取设计DNA，构建你的风格参考库
+            Extract design DNA from any website or image. Get Tailwind configs, CSS variables, and AI prompts.
           </p>
-          <Link
-            href="/analyze"
-            className="inline-block bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-          >
-            开始分析
-          </Link>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/analyze"
+              className="inline-block bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+            >
+              Start Analyzing
+            </Link>
+            <Link
+              href="/showcase"
+              className="inline-block bg-white text-black border border-gray-300 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+            >
+              View Showcase
+            </Link>
+          </div>
         </div>
 
         {/* Error banner */}
