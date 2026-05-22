@@ -54,13 +54,29 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Tactile feedback for interactive elements */
+/* Tactile feedback and accessible focus for interactive elements */
 button, a, [role="button"] {
-  transition: transform 0.1s ease;
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 button:active, a:active, [role="button"]:active {
-  transform: scale-[0.98];
+  transform: scale(0.98);
+}
+
+:focus-visible {
+  outline: 2px solid var(--zinc-950);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Liquid glass effect utility */

@@ -172,4 +172,19 @@ describe('assembleSpec', () => {
     const b = assembleSpec({ styleName: 'B' });
     expect(a.styleId).not.toBe(b.styleId);
   });
+
+  it('preserves source metadata when options are omitted', () => {
+    const spec = assembleSpec({
+      styleName: 'From URL',
+      source: {
+        type: 'url',
+        originalUrl: 'https://example.com',
+        thumbnailRef: 'https://example.com/og.png',
+      },
+    });
+
+    expect(spec.source.type).toBe('url');
+    expect(spec.source.originalUrl).toBe('https://example.com');
+    expect(spec.source.thumbnailRef).toBe('https://example.com/og.png');
+  });
 });

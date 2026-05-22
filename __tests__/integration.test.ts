@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { normalizeSpec, withDerived } from '@/app/lib/ai-client';
+import type { StyleSpecV1Input } from '@/app/lib/spec/types';
 
 describe('share token round-trip', () => {
   it('compresses and decompresses a spec', () => {
@@ -46,14 +47,14 @@ describe('demo styles data integrity', () => {
   it('all demo styles can be normalized', async () => {
     const demos = (await import('@/public/demo-styles/index.json')).default;
     for (const demo of demos) {
-      expect(() => normalizeSpec(demo.spec)).not.toThrow();
+      expect(() => normalizeSpec(demo.spec as StyleSpecV1Input)).not.toThrow();
     }
   });
 
   it('all demo styles can have derived outputs generated', async () => {
     const demos = (await import('@/public/demo-styles/index.json')).default;
     for (const demo of demos) {
-      const spec = normalizeSpec(demo.spec);
+      const spec = normalizeSpec(demo.spec as StyleSpecV1Input);
       expect(() => withDerived(spec)).not.toThrow();
       const derived = withDerived(spec);
       expect(derived.derived!.cssVariables).toBeTruthy();

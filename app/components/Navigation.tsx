@@ -3,22 +3,21 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const navItems = [
+  { href: '/library', label: '库' },
+  { href: '/analyze', label: '分析' },
+  { href: '/styles/linear-app', label: '案例' },
+  { href: '/compare', label: '对比' },
+];
+
 export default function Navigation() {
   const pathname = usePathname();
-
-  const navItems = [
-    { href: '/library', label: 'Library' },
-    { href: '/analyze', label: 'Analyze' },
-    { href: '/styles/linear-app', label: 'Styles' },
-    { href: '/compare', label: 'Compare' },
-  ];
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  // Map sub-routes to parent nav item
   const activeNav = (() => {
     if (pathname.startsWith('/style/')) return '/library';
     if (pathname.startsWith('/styles/')) return pathname;
@@ -26,49 +25,65 @@ export default function Navigation() {
   })();
 
   return (
-    <nav className="bg-white border-b border-zinc-200/80 backdrop-blur-sm bg-opacity-80 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
+    <nav className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/85 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-6">
             <Link
               href="/"
-              className="text-xl font-bold text-zinc-950 tracking-tight hover:text-zinc-800 transition-colors active:scale-[0.98]"
+              aria-label="Distill 首页"
+              className="group flex items-center gap-2 text-xl font-black tracking-tight text-zinc-950 transition hover:text-zinc-800 active:scale-[0.98]"
             >
-              Distill
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-950 text-sm font-black text-white transition group-hover:rotate-[-3deg]">D</span>
+              <span>Distill</span>
             </Link>
-            <div className="hidden md:flex space-x-6">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`text-sm font-medium transition-all relative ${
-                    isActive(item.href) || activeNav === item.href
-                      ? 'text-zinc-950'
-                      : 'text-zinc-600 hover:text-zinc-950'
-                  }`}
-                >
-                  {item.label}
-                  {(isActive(item.href) || activeNav === item.href) && (
-                    <span className="absolute -bottom-[21px] left-0 right-0 h-0.5 bg-zinc-950" />
-                  )}
-                </Link>
-              ))}
+
+            <div className="hidden items-center gap-1 rounded-full bg-zinc-100 p-1 md:flex">
+              {navItems.map((item) => {
+                const active = isActive(item.href) || activeNav === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      active
+                        ? 'bg-white text-zinc-950 shadow-sm'
+                        : 'text-zinc-600 hover:bg-white/70 hover:text-zinc-950'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
-          {/* Mobile menu */}
-          <div className="flex md:hidden space-x-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`text-sm font-medium transition-colors ${
-                  isActive(item.href) ? 'text-zinc-950' : 'text-zinc-600'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="flex max-w-[50vw] items-center gap-1 overflow-x-auto rounded-full bg-zinc-100 p-1 md:hidden">
+              {navItems.map((item) => {
+                const active = isActive(item.href) || activeNav === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      active ? 'bg-white text-zinc-950 shadow-sm' : 'text-zinc-600'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <Link
+              href="/analyze"
+              className="hidden rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 active:scale-[0.98] sm:inline-flex"
+            >
+              上传截图
+            </Link>
           </div>
         </div>
       </div>

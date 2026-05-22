@@ -8,7 +8,8 @@ import { renderMarkdown } from '@/app/lib/renderers/markdown-doc';
 import { renderRestorationPrompt } from '@/app/lib/renderers/restoration-prompt';
 import { renderTailwindConfig, renderTailwindExample } from '@/app/lib/renderers/tailwind';
 import { renderShadcnTheme, renderShadcnConfig } from '@/app/lib/renderers/shadcn';
-import type { StyleSpecV1 } from '@/app/lib/spec/types';
+import type { StyleSpecV1, StyleSpecV1Input } from '@/app/lib/spec/types';
+export type { StyleSpecV1Input } from '@/app/lib/spec/types';
 
 const API_BASE_URL = 'https://api.apimart.ai/v1';
 const API_KEY = process.env.APIMART_API_KEY;
@@ -18,14 +19,6 @@ const RENDERER_VERSION = '1.0';
 let idCounter = 0;
 
 type SourceType = StyleSpecV1['source']['type'];
-type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends Array<infer U>
-    ? Array<DeepPartial<U>>
-    : T[K] extends object
-      ? DeepPartial<T[K]>
-      : T[K];
-};
-export type StyleSpecV1Input = DeepPartial<StyleSpecV1>;
 
 type AssembleSpecOptions = {
   styleName?: string;
@@ -57,6 +50,10 @@ function stringArray(value: unknown, fallback: string[]): string[] {
 
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
   return typeof value === 'string' && allowed.includes(value as T) ? value as T : fallback;
+}
+
+function optionalEnumValue<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
+  return typeof value === 'string' && allowed.includes(value as T) ? value as T : undefined;
 }
 
 function sectionsValue(value: unknown): StyleSpecV1['layout']['sections'] {
@@ -222,11 +219,11 @@ export function normalizeSpec(partialSpec: StyleSpecV1Input): StyleSpecV1 {
 export function assembleSpec(partialSpec: StyleSpecV1Input, options: AssembleSpecOptions = {}): StyleSpecV1 {
   const existingSource = asRecord(partialSpec.source);
   const existingMeta = asRecord(partialSpec.meta);
-  const source = {
-    ...existingSource,
-    type: options.sourceType,
-    originalUrl: options.originalUrl,
-    thumbnailRef: options.thumbnailRef,
+  const source: StyleSpecV1Input['source'] = {
+    ...partialSpec.source,
+    type: options.sourceType ?? optionalEnumValue(existingSource.type, ['image', 'url', 'screenshot'] as const),
+    originalUrl: options.originalUrl ?? (typeof existingSource.originalUrl === 'string' ? existingSource.originalUrl : undefined),
+    thumbnailRef: options.thumbnailRef ?? (typeof existingSource.thumbnailRef === 'string' ? existingSource.thumbnailRef : undefined),
   };
   const meta = {
     ...existingMeta,

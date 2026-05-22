@@ -1,17 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
+import { GET as getToken } from '@/app/api/token/route';
+import { isValidTokenOrigin } from '@/app/lib/security/origin';
 
 // --- Token route logic tests (pure logic, no Next.js dependency) ---
 describe('Token route security logic', () => {
-  const allowedHosts = [
-    'zomo-design-office.vercel.app',
-    'distill.style',
-    'localhost:3099',
-    'localhost:3100',
-  ];
-
   function isValidOrigin(referer: string, host: string): boolean {
-    const refererHost = referer ? new URL(referer).host : host;
-    return allowedHosts.some(h => refererHost === h || refererHost.endsWith('.' + h));
+    return isValidTokenOrigin(referer, host);
   }
 
   it('allows valid localhost referer', () => {
@@ -34,8 +29,51 @@ describe('Token route security logic', () => {
     expect(isValidOrigin('', 'localhost:3099')).toBe(true);
   });
 
+  it('allows current local preview port 3010', () => {
+    expect(isValidOrigin('http://localhost:3010/analyze', 'localhost:3010')).toBe(true);
+  });
+
   it('allows subdomain of production host', () => {
     expect(isValidOrigin('https://staging.distill.style/', 'staging.distill.style')).toBe(true);
+  });
+});
+
+describe('Token route integration', () => {
+  const originalKey = process.env.APIMART_API_KEY;
+
+  beforeEach(() => {
+    process.env.APIMART_API_KEY = 'test-key';
+  });
+
+  afterEach(() => {
+    if (originalKey === undefined) delete process.env.APIMART_API_KEY;
+    else process.env.APIMART_API_KEY = originalKey;
+  });
+
+  it('allows localhost preview on any development port', async () => {
+    const request = new NextRequest('http://localhost:3010/api/token', {
+      headers: {
+        host: 'localhost:3010',
+        referer: 'http://localhost:3010/analyze',
+      },
+    });
+
+    const response = await getToken(request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ key: 'test-key' });
+  });
+
+  it('rejects malformed referers instead of throwing', async () => {
+    const request = new NextRequest('http://localhost:3010/api/token', {
+      headers: {
+        host: 'localhost:3010',
+        referer: '::::',
+      },
+    });
+
+    const response = await getToken(request);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Invalid origin' });
   });
 });
 

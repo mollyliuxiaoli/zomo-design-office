@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isValidTokenOrigin } from '@/app/lib/security/origin';
 
 export const runtime = 'edge';
 
@@ -32,17 +33,10 @@ export async function GET(request: NextRequest) {
     rateMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
   }
 
-  // Validate referer (prevent third-party abuse)
+  // Validate referer/host (prevent third-party abuse while allowing local preview ports)
   const referer = request.headers.get('referer') || '';
   const host = request.headers.get('host') || '';
-  const allowedHosts = [
-    'zomo-design-office.vercel.app',
-    'distill.style',
-    'localhost:3099',
-    'localhost:3100',
-  ];
-  const refererHost = referer ? new URL(referer).host : host;
-  if (!allowedHosts.some(h => refererHost === h || refererHost.endsWith('.' + h))) {
+  if (!isValidTokenOrigin(referer, host)) {
     return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
   }
 
