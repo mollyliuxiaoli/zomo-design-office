@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { LanguageProvider } from "./components/LanguageProvider";
 import "./globals.css";
 
@@ -46,6 +46,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `https://${brandDomain}`,
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
