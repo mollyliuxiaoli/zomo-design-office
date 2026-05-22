@@ -9,7 +9,9 @@ import { renderRestorationPrompt } from '@/app/lib/renderers/restoration-prompt'
 import { renderTailwindConfig, renderTailwindExample } from '@/app/lib/renderers/tailwind';
 import { renderShadcnTheme, renderShadcnConfig } from '@/app/lib/renderers/shadcn';
 import type { StyleSpecV1, StyleSpecV1Input } from '@/app/lib/spec/types';
-import { STYLE_ANALYSIS_PROMPT } from '@/app/lib/style-analysis-prompt';
+import { getStyleAnalysisPrompt } from '@/app/lib/style-analysis-prompt';
+import type { AnalyzeMode } from '@/app/lib/analyze/modes';
+import { AIProviderError, extractAIErrorMessage } from '@/app/lib/ai-errors';
 export type { StyleSpecV1Input } from '@/app/lib/spec/types';
 
 const API_BASE_URL = 'https://api.apimart.ai/v1';
@@ -258,14 +260,14 @@ export class AIClient {
   /**
    * Analyze image using Gemini 2.5 Flash.
    */
-  async analyzeImage(imageBase64: string): Promise<Partial<StyleSpecV1>> {
+  async analyzeImage(imageBase64: string, mode: Exclude<AnalyzeMode, 'url'> = 'image'): Promise<Partial<StyleSpecV1>> {
     const response = await fetch(`${API_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: this.headers,
       body: JSON.stringify({
         model: GEMINI_MODEL,
         stream: false,
-        max_tokens: 2048,
+        max_tokens: 4096,
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
@@ -274,7 +276,7 @@ export class AIClient {
             content: [
               {
                 type: 'text',
-                text: STYLE_ANALYSIS_PROMPT,
+                text: getStyleAnalysisPrompt(mode),
               },
               {
                 type: 'image_url',
@@ -288,7 +290,8 @@ export class AIClient {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Vision API error: ${response.status} - ${error}`);
+      const providerMessage = extractAIErrorMessage(error) || `HTTP ${response.status}`;
+      throw new AIProviderError(providerMessage, { status: response.status });
     }
 
     const data = await response.json();
@@ -300,7 +303,7 @@ export class AIClient {
       parsed = parseJSON(content) as Partial<StyleSpecV1>;
     } catch (parseError) {
       if (choice?.finish_reason === 'length') {
-        throw new Error('AI response was truncated before valid JSON. Retry with a smaller or more focused screenshot.');
+        throw new AIProviderError('AI response truncated (finish_reason=length)', { retryable: true });
       }
       throw parseError;
     }
@@ -317,11 +320,11 @@ export class AIClient {
   /**
    * Full pipeline: Gemini vision -> StyleSpecV1 -> renderer outputs.
    */
-  async extractStyle(imageBase64: string, styleName?: string): Promise<StyleSpecV1> {
-    const partialSpec = await this.analyzeImage(imageBase64);
+  async extractStyle(imageBase64: string, styleName?: string, sourceType: Exclude<AnalyzeMode, 'url'> = 'image'): Promise<StyleSpecV1> {
+    const partialSpec = await this.analyzeImage(imageBase64, sourceType);
     return assembleSpec(partialSpec, {
       styleName,
-      sourceType: 'image',
+      sourceType,
       thumbnailRef: imageBase64,
       rawAiResponse: partialSpec.meta?.rawAiResponse,
     });

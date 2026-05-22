@@ -2,16 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-const navItems = [
-  { href: '/library', label: '库' },
-  { href: '/analyze', label: '分析' },
-  { href: '/styles/linear-app', label: '案例' },
-  { href: '/compare', label: '对比' },
-];
+import { useLanguage } from './LanguageProvider';
+import { NAV_COPY } from '../lib/i18n';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { language, toggleLanguage } = useLanguage();
+  const copy = NAV_COPY[language];
+  const navItems = copy.items;
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -31,7 +29,7 @@ export default function Navigation() {
           <div className="flex min-w-0 items-center gap-6">
             <Link
               href="/"
-              aria-label="Distill 首页"
+              aria-label={copy.homeAria}
               className="group flex items-center gap-2 text-xl font-black tracking-tight text-zinc-950 transition hover:text-zinc-800 active:scale-[0.98]"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-950 text-sm font-black text-white transition group-hover:rotate-[-3deg]">D</span>
@@ -78,11 +76,20 @@ export default function Navigation() {
               })}
             </div>
 
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              aria-label={copy.languageLabel}
+              className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 active:scale-[0.98]"
+            >
+              {language === 'zh' ? 'EN' : '中文'}
+            </button>
+
             <Link
               href="/analyze"
               className="hidden rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 active:scale-[0.98] sm:inline-flex"
             >
-              上传截图
+              {copy.primaryCta}
             </Link>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navigation from './components/Navigation';
+import { useLanguage } from './components/LanguageProvider';
 import { styleRepo } from './lib/storage/repo';
 import type { LibraryRecord } from './lib/storage/db';
 import { normalizeSpec, withDerived, type StyleSpecV1Input } from './lib/ai-client';
@@ -32,32 +33,94 @@ function getPalette(spec: StyleSpecV1Input): string[] {
   ].filter(Boolean).slice(0, 5);
 }
 
-const STATS = [
-  { label: '分析维度', value: '30+', detail: '色彩 / 字体 / 布局 / 组件' },
-  { label: '导出格式', value: '7', detail: 'CSS · Tailwind · shadcn · Prompt' },
-  { label: '开始门槛', value: '0', detail: '无需注册，上传即可试' },
-];
-
-const HOW_IT_WORKS = [
-  {
-    step: '01',
-    title: '输入截图或网站',
-    desc: '上传界面截图、粘贴图片直链，或输入可公开访问的网站 URL。',
-    hint: 'PNG / JPG / WebP / URL',
+const HOME_COPY = {
+  zh: {
+    stats: [
+      { label: '分析维度', value: '30+', detail: '色彩 / 字体 / 布局 / 组件' },
+      { label: '导出格式', value: '7', detail: 'CSS · Tailwind · shadcn · Prompt' },
+      { label: '开始门槛', value: '0', detail: '无需注册，上传即可试' },
+    ],
+    howItWorks: [
+      { step: '01', title: '输入截图或网站', desc: '上传界面截图、粘贴图片直链，或输入可公开访问的网站 URL。', hint: 'PNG / JPG / WebP / URL' },
+      { step: '02', title: '拆解视觉 DNA', desc: '提取颜色、字体、间距、圆角、阴影、布局结构和组件语言。', hint: 'Tokens / Layout / Components' },
+      { step: '03', title: '导出复刻提示词', desc: '生成 CSS 变量、Tailwind 配置、shadcn 主题和可复用还原 Prompt。', hint: 'CSS / Config / Prompt' },
+    ],
+    hero: {
+      badge: 'Visual Style Compiler',
+      title: '截图 → 完整设计系统',
+      description: <>上传截图或输入网站 URL，把页面反向拆解成颜色、字体、间距、组件语言和可复刻提示词。<br className="hidden sm:block" />设计师看风格，前端拿配置，AI 直接拿 Prompt。</>,
+      primary: '上传截图开始分析',
+      secondary: '查看完整输出示例 →',
+      meta: '无需注册 · 支持截图/URL · 约 30-60 秒生成可复制结果',
+    },
+    preview: {
+      source: 'source screenshot',
+      extracted: 'extracted dna',
+      ready: 'ready',
+    },
+    workflow: {
+      eyebrow: 'workflow',
+      title: '三步把截图变成可复用资产',
+      description: '不是只给一句“风格很高级”，而是把视觉判断拆成可复制、可导出、可复刻的设计资料。',
+    },
+    library: {
+      eyebrow: 'case library',
+      title: '经典风格不是色块，而是一组可复用规则',
+      description: '每个案例展示提取出的颜色、字体、密度、圆角和语气关键词，点击后可查看完整风格分析。',
+      viewAnalysis: '查看分析 →',
+      font: '字体',
+      radius: '圆角',
+      shadow: '阴影',
+      loading: '正在加载示例风格…',
+    },
+    myAnalysis: { eyebrow: 'your analysis', title: '我的分析', viewAll: '查看全部 →', untitled: '未命名' },
+    finalCta: { eyebrow: 'ready to distill', title: '把下一张参考图变成你的复刻说明书', description: '免费试用，无需注册。上传截图后即可获得可复制的设计 Token、代码配置和 AI 还原提示词。', cta: '上传截图开始分析 →' },
+    footer: { analyze: '分析', library: '风格库', examples: '示例', compare: '对比' },
   },
-  {
-    step: '02',
-    title: '拆解视觉 DNA',
-    desc: '提取颜色、字体、间距、圆角、阴影、布局结构和组件语言。',
-    hint: 'Tokens / Layout / Components',
+  en: {
+    stats: [
+      { label: 'Analysis dimensions', value: '30+', detail: 'Color / Type / Layout / Components' },
+      { label: 'Export formats', value: '7', detail: 'CSS · Tailwind · shadcn · Prompt' },
+      { label: 'Setup required', value: '0', detail: 'No sign-up. Upload and try.' },
+    ],
+    howItWorks: [
+      { step: '01', title: 'Input a screenshot or website', desc: 'Upload a UI screenshot, paste a direct image link, or enter a public website URL.', hint: 'PNG / JPG / WebP / URL' },
+      { step: '02', title: 'Extract visual DNA', desc: 'Identify colors, type, spacing, radius, shadows, layout structure, and component language.', hint: 'Tokens / Layout / Components' },
+      { step: '03', title: 'Export restoration prompts', desc: 'Generate CSS variables, Tailwind config, shadcn theme snippets, and reusable restoration prompts.', hint: 'CSS / Config / Prompt' },
+    ],
+    hero: {
+      badge: 'Visual Style Compiler',
+      title: 'Screenshot → complete design system',
+      description: <>Upload a screenshot or enter a website URL to reverse-engineer color, type, spacing, component language, and reusable restoration prompts.<br className="hidden sm:block" />Designers get the style logic, engineers get config, AI builders get the prompt.</>,
+      primary: 'Upload screenshot to analyze',
+      secondary: 'View full output example →',
+      meta: 'No sign-up · Screenshot/URL support · Copy-ready output in about 30–60 seconds',
+    },
+    preview: {
+      source: 'source screenshot',
+      extracted: 'extracted dna',
+      ready: 'ready',
+    },
+    workflow: {
+      eyebrow: 'workflow',
+      title: 'Turn screenshots into reusable assets in three steps',
+      description: 'Not a vague “premium style” comment — Distill turns visual judgment into copyable, exportable, rebuildable design material.',
+    },
+    library: {
+      eyebrow: 'case library',
+      title: 'Classic styles are reusable rules, not color swatches',
+      description: 'Each case shows extracted color, type, density, radius, and tone keywords. Open one to inspect the full style report.',
+      viewAnalysis: 'View analysis →',
+      font: 'Type',
+      radius: 'Radius',
+      shadow: 'Shadow',
+      loading: 'Loading example styles…',
+    },
+    myAnalysis: { eyebrow: 'your analysis', title: 'My analyses', viewAll: 'View all →', untitled: 'Untitled' },
+    finalCta: { eyebrow: 'ready to distill', title: 'Turn the next reference into your rebuild playbook', description: 'Free to try, no sign-up. Upload a screenshot to get copy-ready design tokens, code config, and AI restoration prompts.', cta: 'Upload screenshot to analyze →' },
+    footer: { analyze: 'Analyze', library: 'Library', examples: 'Examples', compare: 'Compare' },
   },
-  {
-    step: '03',
-    title: '导出复刻提示词',
-    desc: '生成 CSS 变量、Tailwind 配置、shadcn 主题和可复用还原 Prompt。',
-    hint: 'CSS / Config / Prompt',
-  },
-];
+} as const;
 
 const TOKEN_PREVIEW = [
   { label: 'primary', value: '#5E6AD2', color: '#5E6AD2' },
@@ -74,6 +137,8 @@ const EXPORT_LINES = [
 ];
 
 export default function Home() {
+  const { language } = useLanguage();
+  const copy = HOME_COPY[language];
   const [styles, setStyles] = useState<LibraryRecord[]>([]);
   const [demoStyles, setDemoStyles] = useState<DemoStyle[]>([]);
 
@@ -131,15 +196,14 @@ export default function Home() {
           <div className="text-left">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/75 px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-rose-600" />
-              Visual Style Compiler
+              {copy.hero.badge}
             </div>
 
             <h1 className="max-w-4xl text-5xl font-black leading-[0.94] tracking-[-0.07em] text-zinc-950 [word-break:keep-all] sm:text-6xl lg:text-7xl">
-              截图 → 完整设计系统
+              {copy.hero.title}
             </h1>
             <p className="mt-6 max-w-[64ch] text-lg leading-8 text-zinc-600 sm:text-xl">
-              上传截图或输入网站 URL，把页面反向拆解成颜色、字体、间距、组件语言和可复刻提示词。
-              设计师看风格，前端拿配置，AI 直接拿 Prompt。
+              {copy.hero.description}
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -147,19 +211,19 @@ export default function Home() {
                 href="/analyze"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-zinc-950/10 transition hover:-translate-y-0.5 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 active:scale-[0.98]"
               >
-                上传截图开始分析
+                {copy.hero.primary}
               </Link>
               <Link
                 href="/styles/linear-app"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white/80 px-7 py-4 text-base font-semibold text-zinc-950 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 active:scale-[0.98]"
               >
-                查看完整输出示例 →
+                {copy.hero.secondary}
               </Link>
             </div>
-            <p className="mt-4 text-sm text-zinc-500">无需注册 · 支持截图/URL · 约 30-60 秒生成可复制结果</p>
+            <p className="mt-4 text-sm text-zinc-500">{copy.hero.meta}</p>
 
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              {STATS.map((s) => (
+              {copy.stats.map((s) => (
                 <div key={s.label} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 shadow-sm backdrop-blur">
                   <div className="font-mono text-2xl font-bold tracking-tight text-zinc-950">{s.value}</div>
                   <div className="mt-1 text-sm font-semibold text-zinc-800">{s.label}</div>
@@ -184,7 +248,7 @@ export default function Home() {
                 <div className="grid gap-3 py-4 sm:grid-cols-[0.9fr_1.1fr]">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                     <div className="mb-3 flex items-center justify-between text-xs text-zinc-400">
-                      <span>source screenshot</span>
+                      <span>{copy.preview.source}</span>
                       <span>1440px</span>
                     </div>
                     <div className="space-y-2 rounded-xl bg-[#111111] p-3">
@@ -201,10 +265,10 @@ export default function Home() {
                   <div className="rounded-2xl border border-white/10 bg-white p-4 text-zinc-950">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">extracted dna</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">{copy.preview.extracted}</div>
                         <div className="mt-1 text-xl font-bold tracking-tight">Linear-like system</div>
                       </div>
-                      <div className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">ready</div>
+                      <div className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">{copy.preview.ready}</div>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
@@ -242,16 +306,16 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">workflow</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">三步把截图变成可复用资产</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">{copy.workflow.eyebrow}</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">{copy.workflow.title}</h2>
             </div>
-            <p className="max-w-xl text-zinc-600">不是只给一句“风格很高级”，而是把视觉判断拆成可复制、可导出、可复刻的设计资料。</p>
+            <p className="max-w-xl text-zinc-600">{copy.workflow.description}</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {HOW_IT_WORKS.map((item, index) => (
+            {copy.howItWorks.map((item, index) => (
               <div key={item.step} className="relative rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-                {index < HOW_IT_WORKS.length - 1 && (
+                {index < copy.howItWorks.length - 1 && (
                   <div className="absolute -right-6 top-1/2 z-10 hidden h-px w-8 bg-zinc-300 md:block" />
                 )}
                 <div className="mb-8 flex items-center justify-between">
@@ -269,10 +333,10 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">case library</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">经典风格不是色块，而是一组可复用规则</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">{copy.library.eyebrow}</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">{copy.library.title}</h2>
           </div>
-          <p className="max-w-xl text-zinc-600">每个案例展示提取出的颜色、字体、密度、圆角和语气关键词，点击后可查看完整风格分析。</p>
+          <p className="max-w-xl text-zinc-600">{copy.library.description}</p>
         </div>
 
         {demoStyles.length > 0 ? (
@@ -300,7 +364,7 @@ export default function Home() {
                   <div className="mt-4">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-lg font-bold text-zinc-950">{demo.title}</h3>
-                      <span className="text-sm font-semibold text-zinc-500 transition group-hover:text-zinc-950">查看分析 →</span>
+                      <span className="text-sm font-semibold text-zinc-500 transition group-hover:text-zinc-950">{copy.library.viewAnalysis}</span>
                     </div>
                     <p className="mt-2 line-clamp-2 min-h-[3.5rem] text-sm leading-7 text-zinc-600">{demo.spec.vibe?.description}</p>
 
@@ -312,15 +376,15 @@ export default function Home() {
 
                     <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                       <div className="rounded-xl bg-zinc-50 p-2">
-                        <div className="text-zinc-400">字体</div>
+                        <div className="text-zinc-400">{copy.library.font}</div>
                         <div className="mt-1 truncate font-semibold text-zinc-800">{demo.spec.typography?.scale || 'balanced'}</div>
                       </div>
                       <div className="rounded-xl bg-zinc-50 p-2">
-                        <div className="text-zinc-400">圆角</div>
+                        <div className="text-zinc-400">{copy.library.radius}</div>
                         <div className="mt-1 truncate font-semibold text-zinc-800">{demo.spec.radius?.values?.[0] || '8px'}</div>
                       </div>
                       <div className="rounded-xl bg-zinc-50 p-2">
-                        <div className="text-zinc-400">阴影</div>
+                        <div className="text-zinc-400">{copy.library.shadow}</div>
                         <div className="mt-1 truncate font-semibold text-zinc-800">{demo.spec.shadow?.style || 'soft'}</div>
                       </div>
                     </div>
@@ -336,7 +400,7 @@ export default function Home() {
             })}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-10 text-center text-zinc-500">正在加载示例风格…</div>
+          <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-10 text-center text-zinc-500">{copy.library.loading}</div>
         )}
       </section>
 
@@ -344,10 +408,10 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">your analysis</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-zinc-950">我的分析</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">{copy.myAnalysis.eyebrow}</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-zinc-950">{copy.myAnalysis.title}</h2>
             </div>
-            {styles.length > 6 && <Link href="/library" className="text-sm font-semibold text-zinc-950 hover:underline">查看全部 →</Link>}
+            {styles.length > 6 && <Link href="/library" className="text-sm font-semibold text-zinc-950 hover:underline">{copy.myAnalysis.viewAll}</Link>}
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {styles.slice(0, 6).map((style) => (
@@ -362,7 +426,7 @@ export default function Home() {
                   )}
                 </div>
                 <div className="p-5">
-                  <h3 className="font-bold text-zinc-950">{String(style.title || 'Untitled')}</h3>
+                  <h3 className="font-bold text-zinc-950">{String(style.title || copy.myAnalysis.untitled)}</h3>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {(Array.isArray(style.spec?.vibe?.keywords) ? style.spec.vibe.keywords : []).slice(0, 3).map((tag: unknown, i: number) => (
                       <span key={i} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-600">{String(tag)}</span>
@@ -377,14 +441,14 @@ export default function Home() {
 
       <section className="bg-zinc-950 py-20 text-white">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-300">ready to distill</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">把下一张参考图变成你的复刻说明书</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-zinc-400">免费试用，无需注册。上传截图后即可获得可复制的设计 token、代码配置和 AI 还原提示词。</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-300">{copy.finalCta.eyebrow}</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{copy.finalCta.title}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-zinc-400">{copy.finalCta.description}</p>
           <Link
             href="/analyze"
             className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-base font-semibold text-zinc-950 transition hover:-translate-y-0.5 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.98]"
           >
-            上传截图开始分析 →
+            {copy.finalCta.cta}
           </Link>
         </div>
       </section>
@@ -393,10 +457,10 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-zinc-500 sm:flex-row sm:px-6 lg:px-8">
           <span className="font-semibold text-zinc-950">Distill</span>
           <div className="flex flex-wrap justify-center gap-6">
-            <Link href="/analyze" className="hover:text-zinc-950">分析</Link>
-            <Link href="/library" className="hover:text-zinc-950">风格库</Link>
-            <Link href="/styles/linear-app" className="hover:text-zinc-950">示例</Link>
-            <Link href="/compare" className="hover:text-zinc-950">对比</Link>
+            <Link href="/analyze" className="hover:text-zinc-950">{copy.footer.analyze}</Link>
+            <Link href="/library" className="hover:text-zinc-950">{copy.footer.library}</Link>
+            <Link href="/styles/linear-app" className="hover:text-zinc-950">{copy.footer.examples}</Link>
+            <Link href="/compare" className="hover:text-zinc-950">{copy.footer.compare}</Link>
           </div>
           <span>Visual Style Compiler</span>
         </div>

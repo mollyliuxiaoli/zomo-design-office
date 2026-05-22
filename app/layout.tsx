@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LanguageProvider } from "./components/LanguageProvider";
 import "./globals.css";
 
 const brandName = process.env.NEXT_PUBLIC_BRAND_NAME || 'Distill';
@@ -60,7 +61,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#09090b" />
       </head>
       <body className="antialiased font-sans">
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

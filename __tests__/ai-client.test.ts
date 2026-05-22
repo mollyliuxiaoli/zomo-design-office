@@ -11,8 +11,9 @@ function makeMinimalSpec(overrides: StyleSpecV1Input = {}): StyleSpecV1 {
 describe('style analysis prompt', () => {
   it('keeps the vision prompt compact to avoid truncated AI JSON', () => {
     expect(STYLE_ANALYSIS_PROMPT.length).toBeLessThan(1500);
-    expect(STYLE_ANALYSIS_PROMPT).toContain('under 900 characters');
-    expect(STYLE_ANALYSIS_PROMPT).toContain('minified valid JSON');
+    expect(STYLE_ANALYSIS_PROMPT).toContain('under 1200 characters');
+    expect(STYLE_ANALYSIS_PROMPT).toContain('compact valid JSON');
+    expect(STYLE_ANALYSIS_PROMPT).toContain('strings <= 12 words');
   });
 });
 
