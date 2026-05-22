@@ -6,6 +6,7 @@ import Navigation from '../components/Navigation';
 import { styleRepo } from '../lib/storage/repo';
 import type { LibraryRecord } from '../lib/storage/db';
 import { normalizeSpec, withDerived, type StyleSpecV1Input } from '../lib/ai-client';
+import { STYLE_ANALYSIS_PROMPT } from '../lib/style-analysis-prompt';
 
 type AnalyzeMode = 'image' | 'url' | 'screenshot';
 
@@ -82,59 +83,16 @@ async function callVisionAPI(imageBase64: string, apiKey: string): Promise<Parti
     body: JSON.stringify({
       model: 'gemini-2.5-flash',
       stream: false,
-      max_tokens: 4096,
+      max_tokens: 2048,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Analyze this design image and return ONLY valid JSON, no markdown and no explanation.
-
-Return a StyleSpecV1-compatible partial object. Use this exact shape and enum values:
-{
-  "styleName": "short style name",
-  "source": { "type": "image", "model": "gemini-2.5-flash" },
-  "colors": {
-    "background": ["#ffffff"],
-    "foreground": ["#111827"],
-    "primary": ["#2563eb"],
-    "secondary": ["#7c3aed"],
-    "accent": ["#f59e0b"],
-    "border": ["#e5e7eb"],
-    "semantic": { "success": "#16a34a", "warning": "#d97706", "danger": "#dc2626", "info": "#0284c7" }
-  },
-  "typography": {
-    "fontStyle": "sans",
-    "suggestedFonts": ["Inter", "Arial"],
-    "scale": "balanced",
-    "headingWeight": "700",
-    "bodyWeight": "400",
-    "letterSpacing": "normal",
-    "lineHeight": "normal"
-  },
-  "spacing": { "density": "comfortable", "baseUnit": "8px" },
-  "radius": { "style": "subtle", "values": ["4px", "8px", "16px"] },
-  "shadow": { "style": "soft" },
-  "layout": {
-    "composition": "header-hero-features-cta-footer",
-    "container": "medium",
-    "alignment": "mixed",
-    "sectionCount": 5,
-    "sections": [
-      { "position": "header", "description": "navigation description", "content": ["visible text"] }
-    ]
-  },
-  "components": { "buttons": "button style", "cards": "card style", "navigation": "navigation style" },
-  "vibe": { "keywords": ["minimal", "modern", "clean"], "description": "overall style description", "avoid": ["visual choices to avoid"] },
-  "content": { "headings": ["heading text"], "bodyText": ["body text"], "buttons": ["button text"] },
-  "meta": { "confidence": 85, "warnings": [] }
-}
-
-Rules:
-- Hex colors must be valid #RGB or #RRGGBB values when possible.
-- If a field is uncertain, provide a reasonable default and add a warning in meta.warnings.
-- Do not include derived, cssVariables, markdown, or restorationPrompt.`,
+              text: STYLE_ANALYSIS_PROMPT,
             },
             {
               type: 'image_url',
@@ -152,9 +110,17 @@ Rules:
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content || '';
 
-  return parseJSONFromResponse(content);
+  try {
+    return parseJSONFromResponse(content);
+  } catch (parseError) {
+    if (choice?.finish_reason === 'length') {
+      throw new Error('AI 输出被截断，未生成完整 JSON。请重试一次；如果仍失败，请换一张更小/更聚焦的截图。');
+    }
+    throw parseError;
+  }
 }
 
 /** Robust JSON parser for AI responses */

@@ -1,11 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeSpec, withDerived, parseJSON, assembleSpec } from '@/app/lib/ai-client';
+import { STYLE_ANALYSIS_PROMPT } from '@/app/lib/style-analysis-prompt';
 import type { StyleSpecV1, StyleSpecV1Input } from '@/app/lib/spec/types';
 
 // Minimal valid spec for reuse
 function makeMinimalSpec(overrides: StyleSpecV1Input = {}): StyleSpecV1 {
   return normalizeSpec(overrides);
 }
+
+describe('style analysis prompt', () => {
+  it('keeps the vision prompt compact to avoid truncated AI JSON', () => {
+    expect(STYLE_ANALYSIS_PROMPT.length).toBeLessThan(1500);
+    expect(STYLE_ANALYSIS_PROMPT).toContain('under 900 characters');
+    expect(STYLE_ANALYSIS_PROMPT).toContain('minified valid JSON');
+  });
+});
 
 describe('normalizeSpec', () => {
   it('produces a valid StyleSpecV1 from empty input', () => {
