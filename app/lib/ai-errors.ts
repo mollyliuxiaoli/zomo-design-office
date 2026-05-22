@@ -27,7 +27,7 @@ export function extractAIErrorMessage(bodyText: string): string {
 
 export function isRetryableAIError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error || '');
-  return /unknownerror|internal error|timeout|timed out|abort|overloaded|temporarily|try again|503|502|500|network|failed to fetch|truncated|finish_reason.*length|response was cut off/i.test(message);
+  return /unknownerror|internal error|timeout|timed out|abort|overloaded|temporarily|temporary|try again|503|502|500|network|failed to fetch|truncated|finish_reason.*length|response was cut off|临时失败|自动重试|请再试一次|稍后重试|服务繁忙/i.test(message);
 }
 
 export function getAIUserErrorMessage(error: unknown, language: Language = 'zh'): string {

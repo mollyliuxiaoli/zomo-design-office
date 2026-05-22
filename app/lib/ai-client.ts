@@ -11,7 +11,7 @@ import { renderShadcnTheme, renderShadcnConfig } from '@/app/lib/renderers/shadc
 import type { StyleSpecV1, StyleSpecV1Input } from '@/app/lib/spec/types';
 import { getStyleAnalysisPrompt } from '@/app/lib/style-analysis-prompt';
 import type { AnalyzeMode } from '@/app/lib/analyze/modes';
-import { AIProviderError, extractAIErrorMessage } from '@/app/lib/ai-errors';
+import { AIProviderError, extractAIErrorMessage, isRetryableAIError } from '@/app/lib/ai-errors';
 export type { StyleSpecV1Input } from '@/app/lib/spec/types';
 
 const API_BASE_URL = 'https://api.apimart.ai/v1';
@@ -291,7 +291,10 @@ export class AIClient {
     if (!response.ok) {
       const error = await response.text();
       const providerMessage = extractAIErrorMessage(error) || `HTTP ${response.status}`;
-      throw new AIProviderError(providerMessage, { status: response.status });
+      throw new AIProviderError(providerMessage, {
+        status: response.status,
+        retryable: response.status >= 500 || isRetryableAIError(providerMessage),
+      });
     }
 
     const data = await response.json();

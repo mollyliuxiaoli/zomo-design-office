@@ -25,8 +25,8 @@ export default function Navigation() {
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-6">
+        <div className="flex h-16 items-center justify-between gap-2 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
             <Link
               href="/"
               aria-label={copy.homeAria}
@@ -57,8 +57,8 @@ export default function Navigation() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex max-w-[50vw] items-center gap-1 overflow-x-auto rounded-full bg-zinc-100 p-1 md:hidden">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex max-w-[42vw] items-center gap-1 overflow-x-auto rounded-full bg-zinc-100 p-1 sm:max-w-[50vw] md:hidden">
               {navItems.map((item) => {
                 const active = isActive(item.href) || activeNav === item.href;
                 return (

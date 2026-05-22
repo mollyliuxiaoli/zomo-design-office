@@ -15,6 +15,7 @@ describe('AI provider error handling', () => {
     expect(isRetryableAIError('UnknownError Internal error.')).toBe(true);
     expect(isRetryableAIError('request timeout')).toBe(true);
     expect(isRetryableAIError('AI response truncated (finish_reason=length)')).toBe(true);
+    expect(isRetryableAIError('AI 服务临时失败。系统已自动重试；请再试一次。')).toBe(true);
     expect(isRetryableAIError('invalid api key')).toBe(false);
   });
 

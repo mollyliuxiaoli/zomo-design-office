@@ -70,6 +70,7 @@ export type AnalyzeCopy = {
     compress: string;
     aiAnalyzing: string;
     serverFallback: string;
+    compactRetry: string;
     webAnalyzing: string;
     save: string;
     tokenError: string;
@@ -131,6 +132,7 @@ export const ANALYZE_COPY: Record<Language, AnalyzeCopy> = {
       compress: '[2/4] 压缩图片...',
       aiAnalyzing: '[3/4] AI 分析中，请耐心等待（约 30–60 秒）...',
       serverFallback: '[3/4] 浏览器直连失败，正在切换到服务器重试...',
+      compactRetry: '[3/4] AI 服务不稳定，正在自动压缩并重试...',
       webAnalyzing: '[2/4] 抓取网页并分析视觉系统...',
       save: '[4/4] 保存结果...',
       tokenError: '无法获取 API 授权，请刷新页面后重试',
@@ -225,6 +227,7 @@ export const ANALYZE_COPY: Record<Language, AnalyzeCopy> = {
       compress: '[2/4] Compressing image...',
       aiAnalyzing: '[3/4] AI is analyzing. This can take 30–60 seconds...',
       serverFallback: '[3/4] Browser request failed. Retrying through the server...',
+      compactRetry: '[3/4] AI service is unstable. Compressing further and retrying...',
       webAnalyzing: '[2/4] Fetching website and inferring visual system...',
       save: '[4/4] Saving result...',
       tokenError: 'Could not get API authorization. Refresh and try again',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AIClient, assembleSpec } from '@/app/lib/ai-client';
-import { getAIUserErrorMessage } from '@/app/lib/ai-errors';
+import { getAIUserErrorMessage, isRetryableAIError } from '@/app/lib/ai-errors';
 import type { AnalyzeMode } from '@/app/lib/analyze/modes';
 
 export const runtime = 'edge';
@@ -54,9 +54,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in analyze-style API route:', error);
     const details = getAIUserErrorMessage(error, 'zh');
+    const retryable = isRetryableAIError(error);
     return NextResponse.json(
-      { error: 'Image analysis failed', details },
-      { status: 500 }
+      { error: 'Image analysis failed', details, retryable },
+      { status: retryable ? 503 : 500 }
     );
   }
 }

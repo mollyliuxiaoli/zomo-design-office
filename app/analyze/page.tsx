@@ -22,28 +22,25 @@ import {
   type AnalyzeMode,
   type AnalyzeModeState,
 } from '../lib/analyze/modes';
+import { fitImageDimensions, getImageCompressionPlan, type ImageCompressionSettings } from '../lib/analyze/image-preprocess';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const VISION_TIMEOUT_MS = 90_000;
 const TOKEN_TIMEOUT_MS = 15_000;
 
-/** Compress image to fit within maxWidth while maintaining aspect ratio */
-async function compressImage(dataUrl: string, maxWidth: number, quality: number): Promise<string> {
+/** Compress image by width, height and pixel budget while maintaining aspect ratio. */
+async function compressImage(dataUrl: string, settings: ImageCompressionSettings): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      if (img.width <= maxWidth) {
-        resolve(dataUrl);
-        return;
-      }
-      const scale = maxWidth / img.width;
+      const fitted = fitImageDimensions(img.width, img.height, settings);
       const canvas = document.createElement('canvas');
-      canvas.width = maxWidth;
-      canvas.height = Math.round(img.height * scale);
+      canvas.width = fitted.width;
+      canvas.height = fitted.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) { resolve(dataUrl); return; }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      resolve(canvas.toDataURL('image/jpeg', settings.quality));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
@@ -89,7 +86,10 @@ async function parseVisionResponse(response: Response): Promise<Partial<StyleSpe
 
   if (!response.ok) {
     const providerMessage = extractAIErrorMessage(bodyText) || `HTTP ${response.status}`;
-    throw new AIProviderError(providerMessage, { status: response.status });
+    throw new AIProviderError(providerMessage, {
+      status: response.status,
+      retryable: response.status >= 500 || isRetryableAIError(providerMessage),
+    });
   }
 
   let data: any;
@@ -173,7 +173,11 @@ async function callServerVisionAPI(imagePayload: string, mode: Exclude<AnalyzeMo
   try { data = JSON.parse(bodyText); } catch {}
 
   if (!response.ok) {
-    throw new AIProviderError(data?.details || data?.error || extractAIErrorMessage(bodyText) || `HTTP ${response.status}`, { status: response.status });
+    const message = data?.details || data?.error || extractAIErrorMessage(bodyText) || `HTTP ${response.status}`;
+    throw new AIProviderError(message, {
+      status: response.status,
+      retryable: Boolean(data?.retryable) || response.status >= 500 || isRetryableAIError(message),
+    });
   }
 
   return data.spec || data.partialSpec || data;
@@ -310,14 +314,17 @@ export default function AnalyzePage() {
         }
       } else {
         let imagePayload = runState.preview;
+        let originalDataUrl = '';
 
         if (runState.imageUrl.trim() && !imagePayload?.startsWith('data:')) {
           imagePayload = validateRemoteImageUrl(runState.imageUrl, copy.common.unsupportedImageUrl);
         }
 
         if (imagePayload?.startsWith('data:image/')) {
+          originalDataUrl = imagePayload;
+          const [primarySettings] = getImageCompressionPlan(runMode);
           setRunProgress(runMode, copy.common.compress);
-          imagePayload = await compressImage(imagePayload, 800, 0.8);
+          imagePayload = await compressImage(originalDataUrl, primarySettings);
         }
 
         if (!imagePayload) throw new Error(copy.common.imageProcessingFailed);
@@ -327,13 +334,33 @@ export default function AnalyzePage() {
         if (!tokenRes.ok) throw new Error(copy.common.tokenError);
         const { key } = await tokenRes.json();
 
+        const runVisionPipeline = async (payload: string): Promise<Partial<StyleSpecV1Input>> => {
+          try {
+            return await callVisionAPI(payload, key, runMode);
+          } catch (directError) {
+            if (!isRetryableAIError(directError)) throw directError;
+            setRunProgress(runMode, copy.common.serverFallback);
+            return retry(
+              () => callServerVisionAPI(payload, runMode, runState.styleName),
+              isRetryableAIError,
+              2
+            );
+          }
+        };
+
         let rawSpec: Partial<StyleSpecV1Input>;
         try {
-          rawSpec = await callVisionAPI(imagePayload, key, runMode);
-        } catch (directError) {
-          if (!isRetryableAIError(directError)) throw directError;
-          setRunProgress(runMode, copy.common.serverFallback);
-          rawSpec = await callServerVisionAPI(imagePayload, runMode, runState.styleName);
+          rawSpec = await runVisionPipeline(imagePayload);
+        } catch (firstError) {
+          if (!originalDataUrl || !isRetryableAIError(firstError)) throw firstError;
+
+          const [, compactSettings] = getImageCompressionPlan(runMode);
+          setRunProgress(runMode, copy.common.compactRetry);
+          const compactPayload = await compressImage(originalDataUrl, compactSettings);
+          if (compactPayload === imagePayload) throw firstError;
+
+          imagePayload = compactPayload;
+          rawSpec = await runVisionPipeline(imagePayload);
         }
 
         if (typeof rawSpec !== 'object' || rawSpec === null || Array.isArray(rawSpec)) {
@@ -393,20 +420,20 @@ export default function AnalyzePage() {
         : modeDetail.emptyCta;
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950">
+    <div className="min-h-screen overflow-x-hidden bg-zinc-50 text-zinc-950">
       <Navigation />
 
-      <main className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-14">
+      <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-14">
         <aside className="lg:sticky lg:top-24 lg:h-fit">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-700">{copy.eyebrow}</p>
-          <h1 className="mt-3 max-w-xl text-4xl font-black tracking-tight text-zinc-950 [word-break:keep-all] sm:text-5xl">
+          <h1 className="mt-3 max-w-xl break-words text-3xl font-black leading-tight tracking-tight text-zinc-950 sm:text-5xl sm:[word-break:keep-all]">
             {copy.heroTitle}
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-600">
+          <p className="mt-4 max-w-xl text-base leading-7 text-zinc-600 sm:mt-5 sm:text-lg sm:leading-8">
             {copy.heroDescription}
           </p>
 
-          <div className="mt-8 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mt-8 hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm lg:block">
             <h2 className="font-bold text-zinc-950">{copy.outputTitle}</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               {copy.outputHints.map((item) => (
@@ -420,7 +447,7 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          <div className="mt-8 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mt-8 hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm lg:block">
             <h2 className="font-bold text-zinc-950">{copy.beforeTitle}</h2>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
               {copy.beforeBullets.map((bullet) => <li key={bullet}>· {bullet}</li>)}
@@ -493,54 +520,39 @@ export default function AnalyzePage() {
             </div>
 
             {(mode === 'image' || mode === 'screenshot') && (
-              <>
-                <div>
-                  <div className="mb-2 flex items-end justify-between gap-3">
-                    <label htmlFor={`image-file-${mode}`} className="block text-sm font-semibold text-zinc-800">
-                      {modeDetail.uploadLabel}
-                    </label>
-                    <span className="text-xs font-medium text-zinc-500">{modeDetail.accepts}</span>
+              <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-zinc-900">{modeDetail.primaryInputLabel}</p>
+                    <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-500">{modeDetail.job}</p>
                   </div>
-
-                  <input
-                    key={mode}
-                    id={`image-file-${mode}`}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
-
-                  <label
-                    htmlFor={`image-file-${mode}`}
-                    className="group flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center transition hover:border-zinc-950 hover:bg-white focus-within:border-zinc-950"
-                  >
-                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm ring-1 ring-zinc-200 transition group-hover:-translate-y-0.5">⌁</span>
-                    <span className="mt-4 text-lg font-bold text-zinc-950">{modeDetail.uploadHint}</span>
-                    <span className="mt-2 max-w-md text-sm leading-6 text-zinc-500">{modeDetail.job}</span>
-                  </label>
-
-                  {currentState.file && (
-                    <div className="mt-3 flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-3 text-sm">
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-zinc-900">{currentState.file.name}</div>
-                        <div className="text-zinc-500">{formatFileSize(currentState.file.size)} · {copy.common.localFileSelected}</div>
-                      </div>
-                      <button type="button" onClick={clearSelectedImage} className="rounded-full px-3 py-1.5 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950">
-                        {copy.common.remove}
-                      </button>
-                    </div>
-                  )}
+                  <span className="rounded-full bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-500 ring-1 ring-zinc-200">{modeDetail.accepts}</span>
                 </div>
 
-                <div className="relative text-center">
-                  <div className="absolute inset-x-0 top-1/2 h-px bg-zinc-200" />
-                  <span className="relative bg-white px-3 text-sm font-medium text-zinc-400">{copy.common.orPasteImageUrl}</span>
-                </div>
+                <input
+                  key={mode}
+                  id={`image-file-${mode}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="sr-only"
+                />
 
-                <div>
-                  <label htmlFor="image-url" className="block text-sm font-semibold text-zinc-800">
-                    {modeDetail.urlLabel}
+                <label
+                  htmlFor={`image-file-${mode}`}
+                  className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 text-left transition hover:border-zinc-950 hover:bg-white focus-within:border-zinc-950"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm ring-1 ring-zinc-200">⌁</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-zinc-950">{modeDetail.uploadHint}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-zinc-500">{language === 'en' ? 'Click to choose a file, then preview and removal stay here.' : '点击选择文件；选中后预览和移除操作会在这里集中显示。'}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-bold text-white">{modeDetail.uploadLabel}</span>
+                </label>
+
+                <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+                  <label htmlFor="image-url" className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+                    {copy.common.orPasteImageUrl}
                   </label>
                   <input
                     id="image-url"
@@ -548,27 +560,37 @@ export default function AnalyzePage() {
                     value={currentState.imageUrl}
                     onChange={handleImageUrlChange}
                     placeholder={modeDetail.placeholder}
-                    className="mt-2 w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
                   />
-                  <p className="mt-2 text-sm leading-6 text-zinc-500">{modeDetail.urlHelper}</p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">{modeDetail.urlHelper}</p>
                 </div>
 
                 {currentState.preview && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="block text-sm font-semibold text-zinc-800">{copy.common.imagePreview}</label>
-                      <button type="button" onClick={clearSelectedImage} className="text-sm font-semibold text-zinc-500 hover:text-zinc-950">{copy.common.clear}</button>
+                  <div className="mt-4 overflow-hidden rounded-3xl border border-zinc-200 bg-white">
+                    <div className="flex items-center justify-between gap-3 p-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">{copy.common.imagePreview}</div>
+                        <div className="mt-1 truncate text-sm font-semibold text-zinc-900">
+                          {currentState.file?.name || currentState.imageUrl || modeDetail.uploadLabel}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {currentState.file ? `${formatFileSize(currentState.file.size)} · ${copy.common.localFileSelected}` : modeDetail.urlLabel}
+                        </div>
+                      </div>
+                      <button type="button" onClick={clearSelectedImage} className="shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950">
+                        {copy.common.remove}
+                      </button>
                     </div>
-                    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="border-t border-zinc-200 bg-zinc-50 p-3">
                       <img
                         src={currentState.preview}
                         alt={copy.common.imagePreview}
-                        className="mx-auto max-h-80 max-w-full rounded-2xl object-contain"
+                        className="mx-auto max-h-[52vh] max-w-full rounded-2xl object-contain sm:max-h-[560px]"
                       />
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {mode === 'url' && (
