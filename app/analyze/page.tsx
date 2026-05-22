@@ -292,16 +292,16 @@ export default function AnalyzePage() {
       <Navigation />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-zinc-900 mb-2">
             分析风格
           </h1>
-          <p className="text-gray-500">
+          <p className="text-zinc-500">
             上传截图或输入 URL，AI 提取视觉风格系统
           </p>
         </div>
 
-        {/* Mode Selector */}
+        {/* Mode Selector - Premium pill style */}
         <div className="flex justify-center gap-2 mb-8">
           {[
             { key: 'image' as const, label: '图片分析' },
@@ -311,11 +311,11 @@ export default function AnalyzePage() {
             <button
               key={m.key}
               onClick={() => setMode(m.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
                 mode === m.key
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+                  ? 'bg-zinc-950 text-white shadow-md'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              } active:scale-[0.98]`}
             >
               {m.label}
             </button>
@@ -324,7 +324,7 @@ export default function AnalyzePage() {
 
         {/* Style Name */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">
             风格名称（可选）
           </label>
           <input
@@ -332,30 +332,38 @@ export default function AnalyzePage() {
             value={styleName}
             onChange={(e) => setStyleName(e.target.value)}
             placeholder="例如：Minimalist Dashboard"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 outline-none transition-all"
           />
         </div>
 
         {(mode === 'image' || mode === 'screenshot') && (
           <>
-            {/* File Upload */}
+            {/* File Upload - Beautiful drag-and-drop zone */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
                 上传图片
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-8 border-2 border-dashed border-zinc-300 rounded-lg hover:border-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500 outline-none transition-all cursor-pointer bg-zinc-50 hover:bg-zinc-100"
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center text-zinc-500">
+                    <div className="text-2xl mb-2">拖拽图片到这里或点击上传</div>
+                    <div className="text-sm">支持 PNG, JPG, GIF, WebP</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="text-center text-gray-400 text-sm mb-4">或</div>
+            <div className="text-center text-zinc-400 text-sm mb-4">或</div>
 
             {/* Image URL */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
                 图片 URL
               </label>
               <input
@@ -363,17 +371,17 @@ export default function AnalyzePage() {
                 value={imageUrl}
                 onChange={handleImageUrlChange}
                 placeholder="https://example.com/screenshot.png"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 outline-none transition-all"
               />
             </div>
 
             {/* Preview */}
             {preview && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-zinc-700 mb-1">
                   图片预览
                 </label>
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                <div className="border border-zinc-200 rounded-lg overflow-hidden bg-zinc-50">
                   <img
                     src={preview}
                     alt="Preview"
@@ -387,7 +395,7 @@ export default function AnalyzePage() {
 
         {mode === 'url' && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
               网页 URL
             </label>
             <input
@@ -395,7 +403,7 @@ export default function AnalyzePage() {
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://linear.app"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 outline-none transition-all"
             />
           </div>
         )}
@@ -407,24 +415,25 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* Progress */}
+        {/* Progress - Enhanced with shimmer effect */}
         {progress && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
-            {progress}
+          <div className="mb-6 p-4 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 text-sm relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-zinc-200 to-transparent animate-shimmer"></div>
+            <span className="relative z-10">{progress}</span>
           </div>
         )}
 
-        {/* Submit */}
+        {/* Submit - With active state feedback */}
         <button
           onClick={handleAnalyze}
           disabled={loading}
-          className="w-full py-3 px-6 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-3 px-6 bg-zinc-950 text-white rounded-lg font-medium hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
         >
           {loading ? '分析中...' : '开始分析'}
         </button>
 
         {/* Usage Instructions */}
-        <div className="mt-12 text-center text-gray-400 text-sm">
+        <div className="mt-12 text-center text-zinc-400 text-sm">
           使用说明
         </div>
       </div>

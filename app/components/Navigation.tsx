@@ -26,11 +26,14 @@ export default function Navigation() {
   })();
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white border-b border-zinc-200/80 backdrop-blur-sm bg-opacity-80 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <Link href="/" className="text-xl font-bold text-black tracking-tight">
+            <Link
+              href="/"
+              className="text-xl font-bold text-zinc-950 tracking-tight hover:text-zinc-800 transition-colors active:scale-[0.98]"
+            >
               Distill
             </Link>
             <div className="hidden md:flex space-x-6">
@@ -38,13 +41,16 @@ export default function Navigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-sm font-medium transition-colors ${
+                  className={`text-sm font-medium transition-all relative ${
                     isActive(item.href) || activeNav === item.href
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-600 hover:text-black'
+                      ? 'text-zinc-950'
+                      : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
                   {item.label}
+                  {(isActive(item.href) || activeNav === item.href) && (
+                    <span className="absolute -bottom-[21px] left-0 right-0 h-0.5 bg-zinc-950" />
+                  )}
                 </Link>
               ))}
             </div>
@@ -56,8 +62,8 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-sm font-medium ${
-                  isActive(item.href) ? 'text-black' : 'text-gray-600'
+                className={`text-sm font-medium transition-colors ${
+                  isActive(item.href) ? 'text-zinc-950' : 'text-zinc-600'
                 }`}
               >
                 {item.label}

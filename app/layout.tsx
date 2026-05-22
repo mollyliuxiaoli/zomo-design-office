@@ -57,9 +57,9 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#09090b" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased font-sans">
         {children}
       </body>
     </html>
