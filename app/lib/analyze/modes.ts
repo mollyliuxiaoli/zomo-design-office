@@ -161,7 +161,7 @@ export const ANALYZE_COPY: Record<Language, AnalyzeCopy> = {
         label: '截图还原',
         title: '把截图转成复刻说明书',
         job: '把完整界面拆成布局结构、组件关系和可执行的还原提示词。',
-        description: '适合“照着做一个类似页面”的场景。输出会更关注版式、信息层级、组件清单和 Restoration Prompt。',
+        description: '适合“照着做一个类似页面”的场景。输出会更关注版式、信息层级、组件清单和还原提示词。',
         helper: '如果你想让 AI 或前端照着截图复刻界面，选这个。',
         primaryInputLabel: '上传或粘贴截图',
         cta: '开始还原截图',
@@ -172,7 +172,7 @@ export const ANALYZE_COPY: Record<Language, AnalyzeCopy> = {
         urlHelper: '建议使用完整页面截图直链；宽度 ≥ 1200px 时布局判断更稳定。',
         placeholder: 'https://example.com/screenshot.png',
         accepts: 'PNG / JPG / WebP · 最大 10MB',
-        output: ['布局地图', '组件关系', 'Restoration Prompt'],
+        output: ['布局地图', '组件关系', '还原提示词'],
       },
       url: {
         label: '网页分析',
