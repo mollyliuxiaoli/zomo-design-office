@@ -7,7 +7,6 @@ import { useLanguage } from '../components/LanguageProvider';
 import { styleRepo } from '../lib/storage/repo';
 import type { LibraryRecord } from '../lib/storage/db';
 import { normalizeSpec, withDerived, type StyleSpecV1Input } from '../lib/ai-client';
-import { getStyleAnalysisPrompt } from '../lib/style-analysis-prompt';
 import {
   AIProviderError,
   extractAIErrorMessage,
@@ -26,7 +25,6 @@ import { fitImageDimensions, getImageCompressionPlan, type ImageCompressionSetti
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const VISION_TIMEOUT_MS = 90_000;
-const TOKEN_TIMEOUT_MS = 15_000;
 
 /** Compress image by width, height and pixel budget while maintaining aspect ratio. */
 async function compressImage(dataUrl: string, settings: ImageCompressionSettings): Promise<string> {
@@ -62,60 +60,6 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   }
 }
 
-function parseJSONFromResponse(text: string): Record<string, unknown> {
-  if (!text) throw new Error('AI 返回为空');
-
-  try { return JSON.parse(text); } catch {}
-
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
-  if (codeBlockMatch) {
-    try { return JSON.parse(codeBlockMatch[1]); } catch {}
-  }
-
-  const braceStart = text.indexOf('{');
-  const braceEnd = text.lastIndexOf('}');
-  if (braceStart !== -1 && braceEnd > braceStart) {
-    try { return JSON.parse(text.substring(braceStart, braceEnd + 1)); } catch {}
-  }
-
-  throw new Error(`无法解析 AI 响应 (长度=${text.length})`);
-}
-
-async function parseVisionResponse(response: Response): Promise<Partial<StyleSpecV1Input>> {
-  const bodyText = await response.text();
-
-  if (!response.ok) {
-    const providerMessage = extractAIErrorMessage(bodyText) || `HTTP ${response.status}`;
-    throw new AIProviderError(providerMessage, {
-      status: response.status,
-      retryable: response.status >= 500 || isRetryableAIError(providerMessage),
-    });
-  }
-
-  let data: any;
-  try {
-    data = JSON.parse(bodyText);
-  } catch {
-    throw new AIProviderError(extractAIErrorMessage(bodyText) || bodyText || 'Invalid AI response');
-  }
-
-  if (data?.error) {
-    throw new AIProviderError(extractAIErrorMessage(bodyText));
-  }
-
-  const choice = data.choices?.[0];
-  const content = choice?.message?.content || '';
-
-  try {
-    return parseJSONFromResponse(content);
-  } catch (parseError) {
-    if (choice?.finish_reason === 'length') {
-      throw new AIProviderError('AI response truncated (finish_reason=length)', { retryable: true });
-    }
-    throw parseError;
-  }
-}
-
 async function retry<T>(operation: () => Promise<T>, shouldRetry: (error: unknown) => boolean, attempts = 2): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -128,37 +72,6 @@ async function retry<T>(operation: () => Promise<T>, shouldRetry: (error: unknow
     }
   }
   throw lastError;
-}
-
-/** Call APIMart vision API directly from browser. */
-async function callVisionAPI(imagePayload: string, apiKey: string, mode: Exclude<AnalyzeMode, 'url'>): Promise<Partial<StyleSpecV1Input>> {
-  return retry(async () => {
-    const response = await fetchWithTimeout('https://api.apimart.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gemini-2.5-flash',
-        stream: false,
-        max_tokens: 4096,
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: getStyleAnalysisPrompt(mode) },
-              { type: 'image_url', image_url: { url: imagePayload } },
-            ],
-          },
-        ],
-      }),
-    });
-
-    return parseVisionResponse(response);
-  }, isRetryableAIError, 2);
 }
 
 async function callServerVisionAPI(imagePayload: string, mode: Exclude<AnalyzeMode, 'url'>, styleName: string): Promise<Partial<StyleSpecV1Input>> {
@@ -330,23 +243,11 @@ export default function AnalyzePage() {
         if (!imagePayload) throw new Error(copy.common.imageProcessingFailed);
 
         setRunProgress(runMode, copy.common.aiAnalyzing);
-        const tokenRes = await fetchWithTimeout('/api/token', {}, TOKEN_TIMEOUT_MS);
-        if (!tokenRes.ok) throw new Error(copy.common.tokenError);
-        const { key } = await tokenRes.json();
-
-        const runVisionPipeline = async (payload: string): Promise<Partial<StyleSpecV1Input>> => {
-          try {
-            return await callVisionAPI(payload, key, runMode);
-          } catch (directError) {
-            if (!isRetryableAIError(directError)) throw directError;
-            setRunProgress(runMode, copy.common.serverFallback);
-            return retry(
-              () => callServerVisionAPI(payload, runMode, runState.styleName),
-              isRetryableAIError,
-              2
-            );
-          }
-        };
+        const runVisionPipeline = (payload: string): Promise<Partial<StyleSpecV1Input>> => retry(
+          () => callServerVisionAPI(payload, runMode, runState.styleName),
+          isRetryableAIError,
+          2
+        );
 
         let rawSpec: Partial<StyleSpecV1Input>;
         try {

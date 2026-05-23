@@ -27,7 +27,7 @@ export function extractAIErrorMessage(bodyText: string): string {
 
 export function isRetryableAIError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error || '');
-  return /unknownerror|internal error|timeout|timed out|abort|overloaded|temporarily|temporary|try again|503|502|500|network|failed to fetch|truncated|finish_reason.*length|response was cut off|临时失败|自动重试|请再试一次|稍后重试|服务繁忙/i.test(message);
+  return /unknownerror|internal error|timeout|timed out|abort|overloaded|temporarily|temporary|try again|503|502|500|network|networkerror|failed to fetch|fetch failed|load failed|truncated|finish_reason.*length|response was cut off|临时失败|自动重试|请再试一次|稍后重试|服务繁忙/i.test(message);
 }
 
 export function getAIUserErrorMessage(error: unknown, language: Language = 'zh'): string {
@@ -50,6 +50,12 @@ export function getAIUserErrorMessage(error: unknown, language: Language = 'zh')
     return language === 'en'
       ? 'AI service failed temporarily. Distill has retried the request; please try once more or upload a smaller, clearer image.'
       : 'AI 服务临时失败。系统已自动重试；请再试一次，或换一张更小、更清晰的图片。';
+  }
+
+  if (/network|networkerror|failed to fetch|fetch failed|load failed/i.test(normalized)) {
+    return language === 'en'
+      ? 'Network connection to the AI service failed. The request now uses the server route first; please retry once after refreshing the page.'
+      : '连接 AI 服务的网络请求失败。系统现在会优先走服务器通道；请刷新页面后再试一次。';
   }
 
   if (/timeout|timed out|abort/i.test(normalized)) {

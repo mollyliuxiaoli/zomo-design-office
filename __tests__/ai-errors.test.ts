@@ -11,9 +11,11 @@ describe('AI provider error handling', () => {
     expect(extractAIErrorMessage(body)).toBe('UnknownError Internal error. UnknownError: Internal error.');
   });
 
-  it('treats provider internal errors and timeouts as retryable', () => {
+  it('treats provider internal errors, browser network failures, and timeouts as retryable', () => {
     expect(isRetryableAIError('UnknownError Internal error.')).toBe(true);
     expect(isRetryableAIError('request timeout')).toBe(true);
+    expect(isRetryableAIError('TypeError: Load failed')).toBe(true);
+    expect(isRetryableAIError('NetworkError when attempting to fetch resource.')).toBe(true);
     expect(isRetryableAIError('AI response truncated (finish_reason=length)')).toBe(true);
     expect(isRetryableAIError('AI 服务临时失败。系统已自动重试；请再试一次。')).toBe(true);
     expect(isRetryableAIError('invalid api key')).toBe(false);
@@ -24,5 +26,10 @@ describe('AI provider error handling', () => {
     expect(getAIUserErrorMessage(raw, 'zh')).toContain('AI 服务临时失败');
     expect(getAIUserErrorMessage(raw, 'en')).toContain('AI service failed temporarily');
     expect(getAIUserErrorMessage(raw, 'zh')).not.toContain('UnknownError');
+  });
+
+  it('maps browser fetch failures to network guidance instead of raw error strings', () => {
+    expect(getAIUserErrorMessage('TypeError: Load failed', 'zh')).toContain('网络');
+    expect(getAIUserErrorMessage('NetworkError when attempting to fetch resource.', 'en').toLowerCase()).toContain('network');
   });
 });
